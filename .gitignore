@@ -127,3 +127,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+/crawler/output/*
+!/crawler/output/.gitkeep
+.vscode/
