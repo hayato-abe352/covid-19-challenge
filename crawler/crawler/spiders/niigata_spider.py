@@ -1,174 +1,162 @@
 # -*- coding: utf-8 -*-
-import os
-import re
+from datetime import datetime
 
 import scrapy
-from pdfminer.converter import PDFPageAggregator
-from pdfminer.layout import LAParams, LTContainer, LTTextBox
-from pdfminer.pdfinterp import PDFPageInterpreter, PDFResourceManager
-from pdfminer.pdfpage import PDFPage
+from hashids import Hashids
 
-from crawler.items import Covid19ChallengeItem
-from crawler.utils import convert_date_ja_to_ad
-
-PREF_CODE = 15
-PREF_NAME = "新潟県"
+import crawler.constants as constants
+from crawler.items import Covid19ChallengeDocumentItem, Covid19ChallengeItem
 
 
 class NiigataSpider(scrapy.Spider):
     name = "niigata_spider"
     allowed_domains = ["www.pref.niigata.lg.jp", "www.city.niigata.lg.jp"]
     start_urls = [
-        "http://www.pref.niigata.lg.jp/sec/kikitaisaku/shingata-corona.html"
+        "https://www.pref.niigata.lg.jp/sec/kikitaisaku/"
+        "hasseijokyo-covid19-niigataken.html"
     ]
 
+    pref_code = 15
+    pref_name = "新潟県"
+    pref_name_en = "niigata"
+    hashids = Hashids()
+
     def parse(self, response):
-        # detail_free配下の2つ目のulが発生状況リスト
-        ul = response.css(".detail_free > ul")[1]
-        for li in ul.css("li"):
-            src_label = "".join(li.css("*::text").getall())
-            patients = re.search("県内(.*?)例目", src_label).group(1)
-            date_ja = re.search(r"令和\d+年\d+月[\s0-9]+日", src_label).group()
-            date_ja = re.sub(r"\s+", "", date_ja)
+        # 発生状況テーブルを取得
+        table = response.css("table[summary='県内における感染者の発生状況']")
 
-            if "～" in patients:
-                # 3件以上が同日に発生
-                dash_index = patients.find("～")
-                patient_no_min = int(patients[0:dash_index])
-                dash_index = dash_index + 1
-                patient_no_max = int(patients[dash_index:])
-                patients = list(range(patient_no_min, patient_no_max + 1))
-            elif "、" in patients:
-                # 2件が同日に発生
-                comma_index = patients.find("、")
-                patient_no_first = patients[0:comma_index]
-                comma_index = comma_index + 1
-                patient_no_second = patients[comma_index:]
-                patients = [patient_no_first, patient_no_second]
-            else:
-                patients = [patients]
+        # 発生状況テーブルをループ (先頭行はヘッダなのでスキップ)
+        for tr in table.css("tr")[1:]:
+            item = Covid19ChallengeItem()
 
-            for patient_no in patients:
-                item = Covid19ChallengeItem()
-                item["pref_code"] = PREF_CODE
-                item["pref_name"] = PREF_NAME
-                item["date_ja"] = date_ja
-                item["publication_date"] = convert_date_ja_to_ad(
-                    item["date_ja"]
-                )
-                item["pref_patient_no"] = patient_no
-                item["patient_id"] = "{}-{}".format(PREF_CODE, patient_no)
-
-                href = li.css("a::attr(href)").get()
-                if "www.city.niigata.lg.jp" in href:
-                    # 新潟市HPへのリンクの場合
-                    request = scrapy.Request(
-                        href,
-                        callback=self.parse_city_niigata,
-                        dont_filter=True,
+            td_list = tr.css("td::text").extract()
+            case_data = []
+            for td in td_list:
+                if "\n" in td:
+                    # 改行を含むデータ(セル内の折り返し)は1つ前のデータに連結
+                    case_data[len(case_data) - 1] = "{} {}".format(
+                        case_data[len(case_data) - 1], td.replace("\n", "")
                     )
-                    request.meta["item"] = item
-                    yield request
                 else:
-                    # 新潟市以外のリンク (報道資料への直リンク) の場合
-                    href = response.urljoin(href)
-                    request = scrapy.Request(
-                        href, callback=self.parse_pref_niigata
-                    )
-                    request.meta["item"] = item
-                    yield request
+                    case_data.append(td)
 
-    def parse_city_niigata(self, response):
-        # 新潟市のHPから日付の一致する資料を探す
-        item = response.meta["item"]
-        pdf_links = response.css("a.pdf")
-        pdf_links = [
-            response.urljoin(x.css("*::attr(href)").get())
-            for x in pdf_links
-            if item["date_ja"] in x.get()
-        ]
+            # 都道府県コード
+            item["pref_code"] = self.pref_code
+            # 都道府県名
+            item["pref_name"] = self.pref_name
+            # 都道府県症例番号
+            item["pref_patient_no"] = case_data[0]
 
-        if not pdf_links:
-            # 資料がなければ過去ページに遷移する
-            href = response.css(".linktxt > .innerLink::attr(href)").get()
-            href = response.urljoin(href)
-            request = scrapy.Request(
-                href, callback=self.parse_city_niigata, dont_filter=True
-            )
-            request.meta["item"] = item
-            yield request
-        else:
-            item["information_source"] = "; ".join(pdf_links)
-            for pdf_link in pdf_links:
-                request = scrapy.Request(
-                    pdf_link, callback=self.save_pdf, dont_filter=True
-                )
-                request.meta["item"] = item
-                yield request
+            # 確定日
+            fixed_date_str = case_data[2]
+            # 末尾の曜日部分を除去
+            fixed_date_str = fixed_date_str[:-3]
+            # 年月日書式に変更
+            fixed_date_str = "2020年{}".format(fixed_date_str)
+            # YYYY/MM/DD書式に変更
+            fixed_date = datetime.strptime(fixed_date_str, "%Y年%m月%d日")
+            item["fixed_date"] = fixed_date.strftime("2020/%m/%d")
+
+            # 年代 (10歳代を 10 - 19 形式に変換)
+            age_str = case_data[3]
+            if "10歳未満" in age_str:
+                # 10歳未満の場合のみ0-9固定
+                item["age"] = constants.AGE_LIST[0]
+            else:
+                # 先頭の年代2文字を取得し、リストから年代を取得
+                age = int(age_str[:2])
+                item["age"] = constants.AGE_LIST[age // 10]
+
+            # 性別
+            item["gender"] = case_data[4]
+
+            # 居住地
+            item["residence"] = case_data[5]
+
+            # 職業
+            item["occupation"] = case_data[6]
+
             yield item
 
-    def parse_pref_niigata(self, response):
-        item = response.meta["item"]
-        pdf_links = response.css(
-            "div.detail_free > p > a::attr(href)"
-        ).getall()
-        pdf_links = [response.urljoin(x) for x in pdf_links]
+            # 報道資料へのリンクをリストに追加
+            href = tr.css("a::attr(href)").get()
+            if href is not None and "www.city.niigata.lg.jp" not in href:
+                href = response.urljoin(href)
+                request = scrapy.Request(
+                    href, callback=self.parse_pref_niigata
+                )
+                yield request
 
-        item["information_source"] = "; ".join(pdf_links)
-        for pdf_link in pdf_links:
+        # 新潟市のHPへ遷移
+        request = scrapy.Request(
+            "https://www.city.niigata.lg.jp/"
+            "iryo/kenko/yobou_kansen/kansen/coronavirus.html",
+            callback=self.parse_city_niigata,
+        )
+        yield request
+
+        # 新潟市HP 過去の報道資料へ遷移
+        request = scrapy.Request(
+            "https://www.city.niigata.lg.jp/"
+            "iryo/kenko/yobou_kansen/kansen/covid-19/houdou/index.html",
+            callback=self.parse_city_niigata_index,
+        )
+        yield request
+
+    def parse_city_niigata_index(self, response):
+        links = response.css("ul.norcor > li > a")
+        for link in links:
+            href = link.css("::attr(href)").get()
+
             request = scrapy.Request(
-                pdf_link, callback=self.save_pdf, dont_filter=True
+                response.urljoin(href), callback=self.parse_city_niigata
             )
+            yield request
+
+    def parse_city_niigata(self, response):
+        pdf_links = response.css("a.pdf")
+        for pdf_link in pdf_links:
+            href = pdf_link.css("*::attr(href)").get()
+            if "press" not in href:
+                continue
+
+            label = pdf_link.css("*::text").get()
+            request = scrapy.Request(
+                response.urljoin(href), callback=self.parse_documents
+            )
+            item = Covid19ChallengeDocumentItem()
+            item["label"] = label
             request.meta["item"] = item
             yield request
 
+    def parse_pref_niigata(self, response):
+        pdf_links = response.css("div.detail_free > p > a")
+
+        for pdf_link in pdf_links:
+            href = pdf_link.css("*::attr(href)").get()
+            label = pdf_link.css("*::text").get()
+            request = scrapy.Request(
+                response.urljoin(href), callback=self.parse_documents
+            )
+            item = Covid19ChallengeDocumentItem()
+            item["label"] = label
+            request.meta["item"] = item
+            yield request
+
+    def parse_documents(self, response):
+        item = response.meta["item"]
+        # ファイル名
+        item["file_name"] = response.url.split("/")[-1]
+        item["pref_code"] = self.pref_code
+        item["pref_name"] = self.pref_name
+        item["href"] = response.url
+        item["last_modified"] = response.headers.get("Last-Modified")
+
+        if item["last_modified"]:
+            # datetimeに変換
+            item["last_modified"] = datetime.strptime(
+                item["last_modified"].decode("utf-8"),
+                "%a, %d %b %Y %H:%M:%S %Z",
+            )
+
         yield item
-
-    def save_pdf(self, response):
-        os.makedirs("output/temp/niigata/pdf", exist_ok=True)
-        pdf_file = os.path.join(
-            "output/temp/niigata/pdf", response.url.split("/")[-1]
-        )
-
-        # ファイルの保存
-        if os.path.exists(pdf_file):
-            # 既に存在すればスキップ
-            return
-
-        with open(pdf_file, "wb") as f:
-            f.write(response.body)
-
-        # PDFのテキスト抽出
-        laparams = LAParams(detect_vertical=True)
-        resource_manager = PDFResourceManager()
-        device = PDFPageAggregator(resource_manager, laparams=laparams)
-        interpreter = PDFPageInterpreter(resource_manager, device)
-
-        os.makedirs("output/temp/niigata/text", exist_ok=True)
-        text_file = os.path.splitext(os.path.basename(pdf_file))[0] + ".txt"
-        text_file = os.path.join("output/temp/niigata/text", text_file)
-        with open(pdf_file, "rb") as pdf_f:
-            with open(text_file, "w", encoding="utf-8") as text_f:
-                for page in PDFPage.get_pages(pdf_f):
-                    interpreter.process_page(page)
-                    layout = device.get_result()
-
-                    boxes = self.get_pdf_textbox_list(layout)
-                    boxes.sort(key=lambda b: (-b.y1, b.x0))
-
-                    for box in boxes:
-                        text_f.write(box.get_text().strip())
-
-    def get_pdf_textbox_list(self, pdf_layout_obj):
-
-        if isinstance(pdf_layout_obj, LTTextBox):
-            return [pdf_layout_obj]
-
-        if isinstance(pdf_layout_obj, LTContainer):
-            boxes = []
-            for child in pdf_layout_obj:
-                boxes.extend(self.get_pdf_textbox_list(child))
-
-            return boxes
-
-        return []

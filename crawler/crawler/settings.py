@@ -15,7 +15,8 @@ SPIDER_MODULES = ["crawler.spiders"]
 NEWSPIDER_MODULE = "crawler.spiders"
 
 
-# Crawl responsibly by identifying yourself (and your website) on the user-agent
+# Crawl responsibly by identifying yourself (and your website)
+# on the user-agent
 # USER_AGENT = 'covid_19_challenge (+http://www.yourdomain.com)'
 
 # Obey robots.txt rules
@@ -64,9 +65,7 @@ DOWNLOAD_DELAY = 2
 
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
-# ITEM_PIPELINES = {
-#    'covid_19_challenge.pipelines.Covid19ChallengePipeline': 300,
-# }
+ITEM_PIPELINES = {"crawler.pipelines.Covid19ChallengePipeline": 300}
 
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See https://docs.scrapy.org/en/latest/topics/autothrottle.html
@@ -89,11 +88,21 @@ HTTPCACHE_DIR = "httpcache"
 HTTPCACHE_IGNORE_HTTP_CODES = []
 HTTPCACHE_STORAGE = "scrapy.extensions.httpcache.FilesystemCacheStorage"
 
-FEED_EXPORT_FIELDS = [
-    "patient_id",
-    "pref_code",
+FEED_EXPORT_FIELDS_PATIENTS = [
     "pref_patient_no",
-    "publication_date",
+    "fixed_date",
     "pref_name",
-    "information_source",
+    "age",
+    "gender",
+    "residence",
+    "occupation",
+]
+
+FEED_EXPORT_FIELDS_DOCUMENTS = [
+    "file_name",
+    "pref_code",
+    "pref_name",
+    "last_modified",
+    "label",
+    "href",
 ]
