@@ -6,7 +6,7 @@ from Simulator import Infection, Simulator
 # シミュレーションパラメータ
 SIMULATION_PARAMS = {
     "simulation_days": 150,
-    "episode_num": 1,
+    "episode_num": 5,
     "env_size": 10,
     "population": 200,
     "init_infected_num": 3,
@@ -16,6 +16,7 @@ SIMULATION_PARAMS = {
 INFECTION_PARAMS = {
     "infection_prob": 0.02,
     "recovery_prob": 1 / 20,
+    "antibody_acquisition_prob": 1.0,
     "influence_range": 2,
 }
 
