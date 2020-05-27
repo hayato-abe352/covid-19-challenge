@@ -4,7 +4,7 @@
 import math
 import random
 
-from Status import Status
+from Agent.Status import Status
 
 
 class Agent:

@@ -2,6 +2,7 @@
 MASシミュレーター
 """
 import math
+from collections import OrderedDict
 
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
@@ -63,8 +64,6 @@ class Simulator:
         """ シミュレーションを実行 """
         self.i_values_in_all_episode = []
         for episode in range(self.episode_num):
-            print("##### START EPISODE: {} #####".format(episode))
-
             # 環境を生成し、エージェントを初期化
             env = Environment(
                 self.env_size, self.population, self.infection_model
@@ -87,26 +86,30 @@ class Simulator:
             self.r_values = [recovered_num]
             self.snap_shots = []
 
-            for day in tqdm(range(self.simulation_days)):
-                self.one_episode(env)
+            with tqdm(range(self.simulation_days)) as pbar:
+                for day in pbar:
+                    self.one_episode(env)
 
-                susceptable_num = env.count_susceptable()
-                infected_num = env.count_infected()
-                recovered_num = env.count_recovered()
+                    susceptable_num = env.count_susceptable()
+                    infected_num = env.count_infected()
+                    recovered_num = env.count_recovered()
 
-                self.t_values.append(day + 1)
-                self.s_values.append(susceptable_num)
-                self.i_values.append(infected_num)
-                self.r_values.append(recovered_num)
-                self.snap_shots.append(env.get_snap_shot_df())
+                    self.t_values.append(day + 1)
+                    self.s_values.append(susceptable_num)
+                    self.i_values.append(infected_num)
+                    self.r_values.append(recovered_num)
+                    self.snap_shots.append(env.get_snap_shot_df())
 
-                print(
-                    "\rDay:{}\tS:{}\tI:{}\tR:{}".format(
-                        day + 1, susceptable_num, infected_num, recovered_num
-                    ),
-                    end="",
-                )
-            self.i_values_in_all_episode.append(self.i_values)
+                    pbar.set_description("[Episode {}]".format(episode))
+                    pbar.set_postfix(
+                        OrderedDict(
+                            day=day + 1,
+                            s=susceptable_num,
+                            i=infected_num,
+                            r=recovered_num,
+                        )
+                    )
+                self.i_values_in_all_episode.append(self.i_values)
 
     def output_logs(self):
         """ シミュレーションログを出力 """
