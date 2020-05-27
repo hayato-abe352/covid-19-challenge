@@ -34,9 +34,14 @@ class Agent:
         # 自身の周囲に存在するエージェント
         self.neighbor_agents = []
 
-    def decide_next_position(self, x_min, x_max, y_min, y_max):
+    def decide_next_position(self, x_min, x_max, y_min, y_max, pattern):
         """ 次のエージェント位置を決定 """
         # TODO: 行動に関する意思決定機能を追加
+
+        if pattern == "freeze":
+            self.next_x = self.x
+            self.next_y = self.y
+            return
 
         if self.status == Status.INFECTED or self.status == Status.RECOVERED:
             self.next_x = self.x

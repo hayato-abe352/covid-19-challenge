@@ -28,6 +28,7 @@ class Simulator:
         env_size,
         population,
         init_infected_num,
+        agent_moving,
     ):
         # シミュレートする感染症モデル
         self.infection_model = infection_model
@@ -44,6 +45,9 @@ class Simulator:
         # 初期感染者数
         self.init_infected_num = init_infected_num
 
+        # エージェントの移動パターン
+        self.agent_moving = agent_moving
+
         # グラフ描画用
         self.t_values = []
         self.s_values = []
@@ -57,7 +61,9 @@ class Simulator:
         # エージェントの次の位置・ステータスを決定
         for agent in env.agents:
             agent.neighbor_agents = env.get_neighbor_agents(agent)
-            agent.decide_next_position(0, self.env_size, 0, self.env_size)
+            agent.decide_next_position(
+                0, self.env_size, 0, self.env_size, self.agent_moving
+            )
             agent.decide_next_status()
 
         # エージェントの位置・ステータスを更新

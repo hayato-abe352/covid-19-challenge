@@ -10,6 +10,7 @@ SIMULATION_PARAMS = {
     "env_size": 10,
     "population": 200,
     "init_infected_num": 3,
+    "agent_moving": "freeze"
 }
 
 # 感染症パラメータ
