@@ -1,7 +1,7 @@
 """
 MASシミュレーションの実行コード
 """
-from Simulator import InfectionModel, Simulator
+from Simulator import Infection, Simulator
 
 # シミュレーションパラメータ
 SIMULATION_PARAMS = {
@@ -21,7 +21,7 @@ INFECTION_PARAMS = {
 
 
 def main():
-    infection_model = InfectionModel.Infection(**INFECTION_PARAMS)
+    infection_model = Infection(**INFECTION_PARAMS)
     simulator = Simulator(infection_model=infection_model, **SIMULATION_PARAMS)
 
     # シミュレーション実行
