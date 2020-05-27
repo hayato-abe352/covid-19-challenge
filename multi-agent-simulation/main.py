@@ -27,6 +27,17 @@ def main():
     # シミュレーション実行
     simulator.run()
 
+    # ログ出力
+    simulator.output_logs()
+
+    # ラインチャート出力
+    simulator.output_line_charts()
+
+    # 集計結果出力
+    simulator.output_aggregated_line_chart()
+
+    # アニメーション出力
+    simulator.output_animation()
 
 if __name__ == "__main__":
     main()

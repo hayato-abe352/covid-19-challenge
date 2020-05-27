@@ -1,6 +1,7 @@
 """
 MASシミュレーター
 """
+import sys
 import math
 from collections import OrderedDict
 
@@ -9,9 +10,13 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 from tqdm import tqdm
+from loguru import logger
 
 from Agent import Status
 from Environment import Environment
+
+logger.remove()
+logger.add(sys.stdout, colorize=True, backtrace=False, diagnose=False)
 
 
 class Simulator:
@@ -63,6 +68,11 @@ class Simulator:
     def run(self):
         """ シミュレーションを実行 """
         self.i_values_in_all_episode = []
+        logger.info(
+            "シミュレーション開始 Episode: {} (Day: {})".format(
+                self.episode_num, self.simulation_days
+            )
+        )
         for episode in range(self.episode_num):
             # 環境を生成し、エージェントを初期化
             env = Environment(
@@ -74,7 +84,7 @@ class Simulator:
             susceptable_num = env.count_susceptable()
             infected_num = env.count_infected()
             recovered_num = env.count_recovered()
-            print(
+            logger.info(
                 "Population density: {} [members/square]".format(
                     self.population / (self.env_size ** 2)
                 )
@@ -100,7 +110,7 @@ class Simulator:
                     self.r_values.append(recovered_num)
                     self.snap_shots.append(env.get_snap_shot_df())
 
-                    pbar.set_description("[Episode {}]".format(episode))
+                    pbar.set_description("[Run: Episode {}]".format(episode))
                     pbar.set_postfix(
                         OrderedDict(
                             day=day + 1,
@@ -110,66 +120,78 @@ class Simulator:
                         )
                     )
                 self.i_values_in_all_episode.append(self.i_values)
+        logger.info("シミュレーション終了")
 
     def output_logs(self):
         """ シミュレーションログを出力 """
+        logger.info("ログ出力を開始します")
         for episode in range(self.episode_num):
             df = pd.DataFrame(
                 columns=["Day", "Susceptable", "Infected", "Recovered"]
             )
-            for t, s, i, r in tqdm(
+            with tqdm(
                 zip(
                     self.t_values, self.s_values, self.i_values, self.r_values
                 ),
                 total=len(self.t_values),
-            ):
-                record = pd.Series(index=df.columns, dtype="object")
-                record["Day"] = t
-                record["Susceptable"] = s
-                record["Infected"] = i
-                record["Recovered"] = r
-                df = df.append(record, ignore_index=True)
-            df.to_csv(
-                "outputs/logs/episode-{}.csv".format(episode), index=False
-            )
-            print("episode-{}.csv を出力しました".format(episode))
+            ) as pbar:
+                for t, s, i, r in pbar:
+                    pbar.set_description(
+                        "[LogOutput: Episode {}]".format(episode)
+                    )
+                    record = pd.Series(index=df.columns, dtype="object")
+                    record["Day"] = t
+                    record["Susceptable"] = s
+                    record["Infected"] = i
+                    record["Recovered"] = r
+                    df = df.append(record, ignore_index=True)
+                df.to_csv(
+                    "outputs/logs/episode-{}.csv".format(episode), index=False
+                )
+                logger.info("episode-{}.csv を出力しました".format(episode))
 
     def output_line_charts(self):
         """ ラインチャートを出力 """
+        logger.info("ラインチャート出力を開始します")
         for episode in range(self.episode_num):
             plt.clf()
             df = pd.DataFrame(columns=["Day", "Count", "Status"])
 
-            for t, s, i, r in tqdm(
+            with tqdm(
                 zip(
                     self.t_values, self.s_values, self.i_values, self.r_values
                 ),
                 total=len(self.t_values),
-            ):
-                s_record = pd.Series(index=df.columns, dtype="object")
-                s_record["Day"] = t
-                s_record["Count"] = s
-                s_record["Status"] = Status.SUSCEPTABLE.value
-                df = df.append(s_record, ignore_index=True)
+            ) as pbar:
+                for t, s, i, r in pbar:
+                    pbar.set_description(
+                        "[LineChartOutput: Episode {}]".format(episode)
+                    )
 
-                i_record = pd.Series(index=df.columns, dtype="object")
-                i_record["Day"] = t
-                i_record["Count"] = i
-                i_record["Status"] = Status.INFECTED.value
-                df = df.append(i_record, ignore_index=True)
+                    s_record = pd.Series(index=df.columns, dtype="object")
+                    s_record["Day"] = t
+                    s_record["Count"] = s
+                    s_record["Status"] = Status.SUSCEPTABLE.value
+                    df = df.append(s_record, ignore_index=True)
 
-                r_record = pd.Series(index=df.columns, dtype="object")
-                r_record["Day"] = t
-                r_record["Count"] = r
-                r_record["Status"] = Status.RECOVERED.value
-                df = df.append(r_record, ignore_index=True)
+                    i_record = pd.Series(index=df.columns, dtype="object")
+                    i_record["Day"] = t
+                    i_record["Count"] = i
+                    i_record["Status"] = Status.INFECTED.value
+                    df = df.append(i_record, ignore_index=True)
+
+                    r_record = pd.Series(index=df.columns, dtype="object")
+                    r_record["Day"] = t
+                    r_record["Count"] = r
+                    r_record["Status"] = Status.RECOVERED.value
+                    df = df.append(r_record, ignore_index=True)
 
             df["Day"] = df["Day"].astype(int)
             df["Count"] = df["Count"].astype(int)
 
             sns.lineplot(x="Day", y="Count", hue="Status", data=df)
-            plt.savefig("output/images/episode-{}.png".format(episode))
-            print("episode-{}.png を出力しました".format(episode))
+            plt.savefig("outputs/images/episode-{}.png".format(episode))
+            logger.info("episode-{}.png を出力しました".format(episode))
 
     def output_aggregated_line_chart(self, estimator="mean"):
         """ 集計結果のラインチャートを出力
@@ -180,6 +202,7 @@ class Simulator:
             集計方法（デフォルトは平均値）
             Noneを指定した場合は、全エピソードの結果を重ねてプロット
         """
+        logger.info("集計結果ラインチャートの出力を開始します")
         plt.clf()
         df = pd.DataFrame(columns=["Episode", "Day", "Count"])
         for episode, i_values in enumerate(self.i_values_in_all_episode):
@@ -204,17 +227,18 @@ class Simulator:
             )
         else:
             sns.lineplot(x="Day", y="Count", estimator=estimator, data=df)
-        plt.savefig("output/images/aggrigated.png")
-        print("aggrigated.png を出力しました")
+        plt.savefig("outputs/images/aggrigated.png")
+        logger.info("aggrigated.png を出力しました")
 
-    def output_animation(self, interval=200):
+    def output_animation(self, interval=500):
         """ シミュレーション結果の動画を出力
-        
+
         Parameters
         ----------
         interval : int, optional
             フレーム切り替え時間[ms]（デフォルトは200ms）
         """
+        logger.info("アニメーションの出力を開始します")
         for episode in range(self.episode_num):
             plt.clf()
             fig = plt.figure()
@@ -224,27 +248,32 @@ class Simulator:
             plt.ylim(-margin, self.env_size + margin)
 
             artists = []
-            for idx, df in enumerate(tqdm(self.snap_shots)):
-                df.loc[
-                    df["status"] == Status.SUSCEPTABLE, "color"
-                ] = "lightskyblue"
-                df.loc[df["status"] == Status.INFECTED, "color"] = "red"
-                df.loc[
-                    df["status"] == Status.RECOVERED, "color"
-                ] = "lightgreen"
+            with tqdm(self.snap_shots) as pbar:
+                for idx, df in enumerate(pbar):
+                    pbar.set_description(
+                        "[AnimationOutput: Episode {}]".format(episode)
+                    )
 
-                artist = plt.scatter(df["x"], df["y"], c=df["color"])
-                title = plt.text(
-                    -margin,
-                    -margin,
-                    "Day:{}".format(idx + 1),
-                    fontsize="small",
-                )
-                artists.append([artist, title])
+                    df.loc[
+                        df["status"] == Status.SUSCEPTABLE, "color"
+                    ] = "lightskyblue"
+                    df.loc[df["status"] == Status.INFECTED, "color"] = "red"
+                    df.loc[
+                        df["status"] == Status.RECOVERED, "color"
+                    ] = "lightgreen"
+
+                    artist = plt.scatter(df["x"], df["y"], c=df["color"])
+                    title = plt.text(
+                        -margin,
+                        -margin,
+                        "Day:{}".format(idx + 1),
+                        fontsize="small",
+                    )
+                    artists.append([artist, title])
 
             anim = animation.ArtistAnimation(fig, artists, interval=interval)
             anim.save(
-                "output/animations/episode-{}.mp4".format(episode),
-                write="ffmpeg",
+                "outputs/animations/episode-{}.mp4".format(episode),
+                writer="ffmpeg",
             )
-            print("episode-{}.mp4 を出力しました".format(episode))
+            logger.info("episode-{}.mp4 を出力しました".format(episode))
