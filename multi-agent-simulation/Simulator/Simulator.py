@@ -47,7 +47,7 @@ class Simulator:
         self.snap_shots = []
         self.i_values_in_all_episode = []
 
-    def one_episode(self, env):
+    def one_epoch(self, env):
         """ 1回のエピソードを実行 """
         # エージェントの次の位置・ステータスを決定
         for agent in env.agents:
@@ -88,7 +88,7 @@ class Simulator:
 
             with tqdm(range(self.simulation_days)) as pbar:
                 for day in pbar:
-                    self.one_episode(env)
+                    self.one_epoch(env)
 
                     susceptable_num = env.count_susceptable()
                     infected_num = env.count_infected()
