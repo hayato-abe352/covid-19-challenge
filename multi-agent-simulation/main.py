@@ -17,7 +17,7 @@ SIMULATION_PARAMS = {
 INFECTION_PARAMS = {
     "infection_prob": 0.02,
     "recovery_prob": 1 / 20,
-    "antibody_acquisition_prob": 1.0,
+    "antibody_acquisition_prob": 0.95,
     "influence_range": 2,
 }
 
@@ -40,6 +40,7 @@ def main():
 
     # アニメーション出力
     simulator.output_animation()
+
 
 if __name__ == "__main__":
     main()

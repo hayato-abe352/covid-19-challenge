@@ -54,7 +54,10 @@ class Simulator:
         self.i_values = []
         self.r_values = []
         self.snap_shots = []
+        self.s_values_in_all_episode = []
         self.i_values_in_all_episode = []
+        self.r_values_in_all_episode = []
+        self.snap_shots_in_all_episode = []
 
     def one_epoch(self, env):
         """ 1回のエピソードを実行 """
@@ -73,7 +76,10 @@ class Simulator:
 
     def run(self):
         """ シミュレーションを実行 """
+        self.s_values_in_all_episode = []
         self.i_values_in_all_episode = []
+        self.r_values_in_all_episode = []
+        self.snap_shots_in_all_episode = []
         logger.info(
             "シミュレーション開始 Episode: {} (Day: {})".format(
                 self.episode_num, self.simulation_days
@@ -125,20 +131,24 @@ class Simulator:
                             r=recovered_num,
                         )
                     )
+                self.s_values_in_all_episode.append(self.s_values)
                 self.i_values_in_all_episode.append(self.i_values)
+                self.r_values_in_all_episode.append(self.r_values)
+                self.snap_shots_in_all_episode.append(self.snap_shots)
         logger.info("シミュレーション終了")
 
     def output_logs(self):
         """ シミュレーションログを出力 """
         logger.info("ログ出力を開始します")
         for episode in range(self.episode_num):
+            s_values = self.s_values_in_all_episode[episode]
+            i_values = self.i_values_in_all_episode[episode]
+            r_values = self.r_values_in_all_episode[episode]
             df = pd.DataFrame(
                 columns=["Day", "Susceptable", "Infected", "Recovered"]
             )
             with tqdm(
-                zip(
-                    self.t_values, self.s_values, self.i_values, self.r_values
-                ),
+                zip(self.t_values, s_values, i_values, r_values),
                 total=len(self.t_values),
             ) as pbar:
                 for t, s, i, r in pbar:
@@ -161,12 +171,13 @@ class Simulator:
         logger.info("ラインチャート出力を開始します")
         for episode in range(self.episode_num):
             plt.clf()
-            df = pd.DataFrame(columns=["Day", "Count", "Status"])
 
+            s_values = self.s_values_in_all_episode[episode]
+            i_values = self.i_values_in_all_episode[episode]
+            r_values = self.r_values_in_all_episode[episode]
+            df = pd.DataFrame(columns=["Day", "Count", "Status"])
             with tqdm(
-                zip(
-                    self.t_values, self.s_values, self.i_values, self.r_values
-                ),
+                zip(self.t_values, s_values, i_values, r_values),
                 total=len(self.t_values),
             ) as pbar:
                 for t, s, i, r in pbar:
@@ -210,29 +221,51 @@ class Simulator:
         """
         logger.info("集計結果ラインチャートの出力を開始します")
         plt.clf()
-        df = pd.DataFrame(columns=["Episode", "Day", "Count"])
-        for episode, i_values in enumerate(self.i_values_in_all_episode):
-            for t, i in zip(self.t_values, i_values):
+        df = pd.DataFrame(columns=["Episode", "Day", "Count", "Status"])
+        for episode in range(self.episode_num):
+            s_values = self.s_values_in_all_episode[episode]
+            i_values = self.i_values_in_all_episode[episode]
+            r_values = self.r_values_in_all_episode[episode]
+            for t, s, i, r in zip(self.t_values, s_values, i_values, r_values):
+                s_record = pd.Series(index=df.columns, dtype="object")
+                s_record["Episode"] = episode
+                s_record["Day"] = t
+                s_record["Count"] = s
+                s_record["Status"] = Status.SUSCEPTABLE.value
+                df = df.append(s_record, ignore_index=True)
+
                 i_record = pd.Series(index=df.columns, dtype="object")
                 i_record["Episode"] = episode
                 i_record["Day"] = t
                 i_record["Count"] = i
+                i_record["Status"] = Status.INFECTED.value
                 df = df.append(i_record, ignore_index=True)
+
+                r_record = pd.Series(index=df.columns, dtype="object")
+                r_record["Episode"] = episode
+                r_record["Day"] = t
+                r_record["Count"] = r
+                r_record["Status"] = Status.RECOVERED.value
+                df = df.append(r_record, ignore_index=True)
 
         df["Episode"] = df["Episode"].astype(str)
         df["Day"] = df["Day"].astype(int)
         df["Count"] = df["Count"].astype(int)
+        df["Status"] = df["Status"].astype(str)
 
         if estimator is None:
             sns.lineplot(
                 x="Day",
                 y="Count",
+                hue="Status",
                 units="Episode",
                 estimator=estimator,
                 data=df,
             )
         else:
-            sns.lineplot(x="Day", y="Count", estimator=estimator, data=df)
+            sns.lineplot(
+                x="Day", y="Count", hue="Status", estimator=estimator, data=df
+            )
         plt.savefig("outputs/images/aggrigated.png")
         logger.info("aggrigated.png を出力しました")
 
@@ -254,7 +287,8 @@ class Simulator:
             plt.ylim(-margin, self.env_size + margin)
 
             artists = []
-            with tqdm(self.snap_shots) as pbar:
+            snap_shots = self.snap_shots_in_all_episode[episode]
+            with tqdm(snap_shots) as pbar:
                 for idx, df in enumerate(pbar):
                     pbar.set_description(
                         "[AnimationOutput: Episode {}]".format(episode)
