@@ -31,11 +31,13 @@ class Environment:
             self.agents.append(agent)
 
         # 生成したエージェントの中から、指定人数に感染症を付与
+        # (初期感染者は必ず自覚症状を持つ)
         infected_ids = random.sample(
             range(self.agent_num), k=infected_agents_num
         )
         for target_id in infected_ids:
             self.agents[target_id].status = Status.INFECTED
+            self.agents[target_id].has_subjective_symptoms = True
 
     def get_neighbor_agents(self, agent):
         """ 対象エージェントの周囲に存在するエージェントのリストを取得 """
