@@ -9,6 +9,7 @@ class Infection:
         infection_prob,
         recovery_prob,
         antibody_acquisition_prob,
+        subjective_symptoms_prob,
         influence_range,
     ):
         # 感染確率( S => I の確率)
@@ -17,5 +18,9 @@ class Infection:
         self.recovery_prob = recovery_prob
         # 抗体獲得確率( I => R に遷移した際、さらに R => S に変化する確率)
         self.antibody_acquisition_prob = antibody_acquisition_prob
+        # 感染した際に自覚症状を発生させる確率
+        self.subjective_symptoms_prob = subjective_symptoms_prob
+
         # 感染範囲(濃厚接触範囲)
         self.influence_range = influence_range
+        

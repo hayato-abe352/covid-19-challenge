@@ -26,10 +26,17 @@ class Agent:
         self.antibody_acquisition_prob = (
             infection_model.antibody_acquisition_prob
         )
+        # 自覚症状が生じる確率
+        self.subjective_symptoms_prob = (
+            infection_model.subjective_symptoms_prob
+        )
 
         # エージェントの状態
         self.status = status
         self.next_status = None
+
+        # 自覚症状の有無
+        self.has_subjective_symptoms = False
 
         # 自身の周囲に存在するエージェント
         self.neighbor_agents = []
@@ -43,21 +50,24 @@ class Agent:
             self.next_y = self.y
             return
 
-        if self.status == Status.INFECTED or self.status == Status.RECOVERED:
+        if self.status == Status.INFECTED and self.has_subjective_symptoms:
+            # 自覚症状ありの感染者の場合、その場に留まる
             self.next_x = self.x
             self.next_y = self.y
             return
 
-        # 自身の周囲に存在する感染者との距離の和を計算
+        # 自身の周囲に存在する感染者(自覚症状がある者のみ)との距離の和を計算
         neighbor_infected = [
-            n for n in self.neighbor_agents if n.status == Status.INFECTED
+            n
+            for n in self.neighbor_agents
+            if n.status == Status.INFECTED and n.has_subjective_symptoms
         ]
         current_sum_dist = self._get_sum_distance_to_infected(
             self.x, self.y, neighbor_infected
         )
 
         # 移動距離
-        distance = 0.4
+        distance = 0.5
         while True:
             direction = random.random() * 2.0 * math.pi
             next_x = self.x + distance * math.cos(direction)
@@ -129,4 +139,15 @@ class Agent:
 
     def update_status(self):
         """ エージェントの状態を更新 """
+        if (
+            self.status == Status.SUSCEPTABLE
+            and self.next_status == Status.INFECTED
+        ):
+            # 感染状態に移行するとき、一定確率で自覚症状を付与
+            if random.random() <= self.subjective_symptoms_prob:
+                self.has_subjective_symptoms = True
+            else:
+                self.has_subjective_symptoms = False
+        elif self.status == Status.RECOVERED:
+            self.has_subjective_symptoms = False
         self.status = self.next_status

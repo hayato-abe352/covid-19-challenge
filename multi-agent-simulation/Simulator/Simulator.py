@@ -237,7 +237,7 @@ class Simulator:
             集計方法（デフォルトは平均値）
             Noneを指定した場合は、全エピソードの結果を重ねてプロット
         """
-        logger.info("集計結果ラインチャートの出力を開始します")
+        logger.info("集計結果ラインチャートの出力を開始します estimator:{}".format(estimator))
         plt.clf()
         df = pd.DataFrame(columns=["Episode", "Day", "Count", "Status"])
         for episode in tqdm(range(self.episode_num)):
@@ -283,12 +283,14 @@ class Simulator:
                 estimator=estimator,
                 data=df,
             )
+            output_path = "outputs/images/aggrigated-all.png"
         else:
             sns.lineplot(
                 x="Day", y="Count", hue="Status", estimator=estimator, data=df
             )
-        plt.savefig("outputs/images/aggrigated.png")
-        logger.info("aggrigated.png を出力しました")
+            output_path = "outputs/images/aggrigated-{}.png".format(estimator)
+        plt.savefig(output_path)
+        logger.info("集計結果ラインチャートを出力しました")
 
     def output_animation(self, interval=500):
         """ シミュレーション結果の動画を出力
@@ -301,7 +303,7 @@ class Simulator:
         logger.info("アニメーションの出力を開始します")
         for episode in range(self.episode_num):
             plt.clf()
-            fig = plt.figure()
+            fig = plt.figure(figsize=(5, 5))
 
             margin = math.ceil(self.env_size * 0.05)
             plt.xlim(-margin, self.env_size + margin)
