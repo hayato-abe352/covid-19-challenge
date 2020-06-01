@@ -38,6 +38,9 @@ class Agent:
         # 自覚症状の有無
         self.has_subjective_symptoms = False
 
+        # 感染してからの経過日数
+        self.infection_duration = 0
+
         # 自身の周囲に存在するエージェント
         self.neighbor_agents = []
 
@@ -139,6 +142,7 @@ class Agent:
 
     def update_status(self):
         """ エージェントの状態を更新 """
+        # 感染時の自覚症状発生判定
         if (
             self.status == Status.SUSCEPTABLE
             and self.next_status == Status.INFECTED
@@ -150,4 +154,13 @@ class Agent:
                 self.has_subjective_symptoms = False
         elif self.status == Status.RECOVERED:
             self.has_subjective_symptoms = False
+
+        # 感染中の経過日数インクリメント
+        if (
+            self.status == Status.INFECTED
+            and self.next_status == Status.INFECTED
+        ):
+            self.infection_duration += 1
+
+        # 状態変化を実行
         self.status = self.next_status
