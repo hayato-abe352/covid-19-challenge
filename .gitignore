@@ -1,8 +1,5 @@
 # MAS Results
 /multi-agent-simulation/outputs/*
-!/multi-agent-simulation/outputs/animations/.gitkeep
-!/multi-agent-simulation/outputs/images/.gitkeep
-!/multi-agent-simulation/outputs/logs/.gitkeep
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

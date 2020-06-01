@@ -1,16 +1,18 @@
 """
 MASシミュレーター
 """
-import sys
+import glob
 import math
+import os
+import sys
 from collections import OrderedDict
 
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
-from tqdm import tqdm
 from loguru import logger
+from tqdm import tqdm
 
 from Agent import Status
 from Environment import Environment
@@ -76,6 +78,8 @@ class Simulator:
 
     def run(self):
         """ シミュレーションを実行 """
+        self.clear_output_dirs()
+
         self.s_values_in_all_episode = []
         self.i_values_in_all_episode = []
         self.r_values_in_all_episode = []
@@ -136,6 +140,20 @@ class Simulator:
                 self.r_values_in_all_episode.append(self.r_values)
                 self.snap_shots_in_all_episode.append(self.snap_shots)
         logger.info("シミュレーション終了")
+
+    def clear_output_dirs(self):
+        """ 出力ディレクトリの中身をクリア """
+        target_dirs = [
+            "outputs/animations/*.mp4",
+            "outputs/images/*.png",
+            "outputs/logs/*.csv",
+        ]
+        logger.info("出力ディレクトリの中身をクリアします")
+        for target_dir in target_dirs:
+            for path in glob.glob(target_dir):
+                if os.path.isfile(path):
+                    os.remove(path)
+        logger.info("出力ディレクトリの中身をクリアしました")
 
     def output_logs(self):
         """ シミュレーションログを出力 """
@@ -210,7 +228,7 @@ class Simulator:
             plt.savefig("outputs/images/episode-{}.png".format(episode))
             logger.info("episode-{}.png を出力しました".format(episode))
 
-    def output_aggregated_line_chart(self, estimator="mean"):
+    def output_aggregated_line_chart(self, title=None, estimator="mean"):
         """ 集計結果のラインチャートを出力
         
         Parameters
@@ -222,7 +240,7 @@ class Simulator:
         logger.info("集計結果ラインチャートの出力を開始します")
         plt.clf()
         df = pd.DataFrame(columns=["Episode", "Day", "Count", "Status"])
-        for episode in range(self.episode_num):
+        for episode in tqdm(range(self.episode_num)):
             s_values = self.s_values_in_all_episode[episode]
             i_values = self.i_values_in_all_episode[episode]
             r_values = self.r_values_in_all_episode[episode]
@@ -252,6 +270,9 @@ class Simulator:
         df["Day"] = df["Day"].astype(int)
         df["Count"] = df["Count"].astype(int)
         df["Status"] = df["Status"].astype(str)
+
+        if title is not None:
+            plt.title(title)
 
         if estimator is None:
             sns.lineplot(
