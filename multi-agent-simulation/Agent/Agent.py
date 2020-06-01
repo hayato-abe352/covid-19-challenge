@@ -22,6 +22,10 @@ class Agent:
         self.infection_prob = infection_model.infection_prob
         # エージェントの回復確率( I => R の確率)
         self.recovery_prob = infection_model.recovery_prob
+        # エージェントの抗体獲得確率( I => R 後に R => S が起きる確率)
+        self.antibody_acquisition_prob = (
+            infection_model.antibody_acquisition_prob
+        )
 
         # エージェントの状態
         self.status = status
@@ -30,9 +34,14 @@ class Agent:
         # 自身の周囲に存在するエージェント
         self.neighbor_agents = []
 
-    def decide_next_position(self, x_min, x_max, y_min, y_max):
+    def decide_next_position(self, x_min, x_max, y_min, y_max, pattern):
         """ 次のエージェント位置を決定 """
         # TODO: 行動に関する意思決定機能を追加
+
+        if pattern == "freeze":
+            self.next_x = self.x
+            self.next_y = self.y
+            return
 
         if self.status == Status.INFECTED or self.status == Status.RECOVERED:
             self.next_x = self.x
@@ -91,7 +100,12 @@ class Agent:
         elif self.status == Status.INFECTED:
             # 感染者は一定確率で回復する想定
             if random.random() <= self.recovery_prob:
-                self.next_status = Status.RECOVERED
+                if random.random() <= self.antibody_acquisition_prob:
+                    # 抗体獲得に成功した場合
+                    self.next_status = Status.RECOVERED
+                else:
+                    # 抗体獲得に失敗した場合
+                    self.next_status = Status.SUSCEPTABLE
             else:
                 self.next_status = Status.INFECTED
 
