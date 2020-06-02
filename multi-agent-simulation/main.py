@@ -8,7 +8,7 @@ SIMULATION_PARAMS = {
     # シミュレーション日数
     "simulation_days": 150,
     # シミュレーションの繰り返し数
-    "episode_num": 2,
+    "episode_num": 10,
     # 環境サイズ
     "env_size": 10,
     # 総人口
@@ -16,7 +16,7 @@ SIMULATION_PARAMS = {
     # 初期感染者数
     "init_infected_num": 3,
     # Hospitalキャパシティ
-    "hospital_capacity": 15,
+    "hospital_capacity": 20,
     # 病院収容までの観察期間
     "observation_period": 3,
     # エージェントの動きパターン (moving/freeze)
@@ -53,7 +53,11 @@ def main():
 
     # 集計結果出力
     episode_num = SIMULATION_PARAMS["episode_num"]
-    title = "TotalEpisode:{}".format(episode_num)
+    h_capacity = SIMULATION_PARAMS["hospital_capacity"]
+    observation_period = SIMULATION_PARAMS["observation_period"]
+    title = "TotalEpisode:{} HC:{} OP:{}days".format(
+        episode_num, h_capacity, observation_period
+    )
     simulator.output_aggregated_sir_chart(title=title)
     simulator.output_aggregated_sir_chart(
         title=title, estimator=None,

@@ -78,7 +78,7 @@ class Agent:
         """ [行動定義関数] ランダムウォーク """
         while True:
             # 移動先が指定範囲内に収まるまで繰り返す
-            next_x, next_y = self._2d_random_walk()
+            next_x, next_y = self._2d_random_walk(distance)
             if (x_min <= next_x <= x_max) and (y_min <= next_y <= y_max):
                 break
 
@@ -106,7 +106,7 @@ class Agent:
 
         while True:
             # 移動先が指定範囲内に収まるまで繰り返す
-            next_x, next_y = self._2d_random_walk()
+            next_x, next_y = self._2d_random_walk(distance)
             next_sum_dist = self._get_sum_distance_to_infected(
                 next_x, next_y, neighbor_infected
             )
