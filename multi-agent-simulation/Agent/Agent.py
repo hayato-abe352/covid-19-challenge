@@ -40,6 +40,8 @@ class Agent:
 
         # 感染してからの経過日数
         self.infection_duration = 0
+        # 病院の収容状況
+        self.is_in_hospital = False
 
         # 自身の周囲に存在するエージェント
         self.neighbor_agents = []
