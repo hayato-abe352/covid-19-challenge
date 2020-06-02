@@ -329,11 +329,12 @@ class Simulator:
         plt.savefig(output_path)
         logger.info("集計結果ラインチャートを出力しました")
 
-    def output_hospital_patients_charts(self):
+    def output_hospital_patients_charts(self, capacity):
         """ 病院の患者数遷移ラインチャートを出力 """
         logger.info("病院の患者数遷移グラフの出力を開始します")
         for episode in range(self.episode_num):
             plt.clf()
+            plt.xlim(0, capacity)
 
             p_values = self.patients_values_in_all_episode[episode]
             df = pd.DataFrame(columns=["Day", "Count"])
@@ -358,7 +359,7 @@ class Simulator:
             logger.info("patients-episode-{}.png を出力しました".format(episode))
 
     def output_hospital_patients_aggregated_chart(
-        self, title, estimator="mean"
+        self, capacity, title=None, estimator="mean"
     ):
         """ 病院の患者数集計ラインチャートを出力
 
@@ -372,6 +373,7 @@ class Simulator:
         """
         logger.info("病院の患者数集計グラフの出力を開始します")
         plt.clf()
+        plt.xlim(0, capacity)
         df = pd.DataFrame(columns=["Episode", "Day", "Count"])
         for episode in tqdm(range(self.episode_num)):
             p_values = self.patients_values_in_all_episode[episode]

@@ -16,9 +16,9 @@ SIMULATION_PARAMS = {
     # 初期感染者数
     "init_infected_num": 3,
     # Hospitalキャパシティ
-    "hospital_capacity": 20,
+    "hospital_capacity": 10,
     # 病院収容までの観察期間
-    "observation_period": 3,
+    "observation_period": 5,
     # エージェントの動きパターン (moving/freeze)
     "agent_moving": "moving",
 }
@@ -64,10 +64,13 @@ def main():
     )
 
     # 病院の患者数推移を出力
-    simulator.output_hospital_patients_charts()
+    h_capacity = SIMULATION_PARAMS["hospital_capacity"]
+    simulator.output_hospital_patients_charts(h_capacity)
 
     # 病院の患者数集計結果を出力
-    simulator.output_hospital_patients_aggregated_chart(title=title)
+    simulator.output_hospital_patients_aggregated_chart(
+        h_capacity, title=title
+    )
 
     # アニメーション出力
     simulator.output_animation()
