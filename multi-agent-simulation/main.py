@@ -71,6 +71,9 @@ def main():
     simulator.output_hospital_patients_aggregated_chart(
         h_capacity, title=title
     )
+    simulator.output_hospital_patients_aggregated_chart(
+        h_capacity, title=title, estimator=None
+    )
 
     # アニメーション出力
     simulator.output_animation()
