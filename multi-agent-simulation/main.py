@@ -8,11 +8,11 @@ SIMULATION_PARAMS = {
     # シミュレーション日数
     "simulation_days": 150,
     # シミュレーションの繰り返し数
-    "episode_num": 10,
+    "episode_num": 1,
     # 環境サイズ
     "env_size": 10,
     # 総人口
-    "population": 200,
+    "population": 100,
     # 初期感染者数
     "init_infected_num": 3,
     # Hospitalキャパシティ

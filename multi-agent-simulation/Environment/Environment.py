@@ -7,7 +7,6 @@ import random
 import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 import pandas as pd
-from scipy.spatial.distance import cdist
 
 from Agent import Agent, Status
 from Environment.Hospital import Hospital
@@ -138,7 +137,7 @@ class Environment:
         neighbors = [
             a
             for a in self.agents
-            if a["address"] == agent.current_section["address"]
+            if a.current_section["address"] == agent.current_section["address"]
         ]
         return neighbors
 

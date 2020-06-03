@@ -69,28 +69,42 @@ class Simulator:
         self.patients_values_in_all_episode = []
         self.snap_shots_in_all_episode = []
 
-    def one_epoch(self, env):
-        """ 1回のエピソードを実行 """
+    def one_epoch(self, env, day):
+        """ 1回のepochを実行 (1-epoch = 1-day) """
         public_sections = [
             sec for sec in env.sections if sec["attribute"] == "public"
         ]
 
-        # エージェントの次の位置・ステータスを決定
-        for agent in env.agents:
-            agent.neighbor_agents = env.get_neighbor_agents(agent)
-            agent.decide_next_position(
-                0,
-                self.env_size,
-                0,
-                self.env_size,
-                public_sections,
-                self.agent_moving,
-            )
-            agent.decide_next_status()
+        # 1時間ごとに Agent を行動させる
+        snap_shots = []
+        with tqdm(range(24)) as pbar:
+            for hour in pbar:
+                pbar.set_description("[Day:{} Hour:{}]".format(day, hour))
+                snap_shots.append(env.get_snap_shot_df())
 
-        # エージェントの位置・ステータスを更新
+                # エージェントの次の位置を決定
+                for agent in env.agents:
+                    # 同じ区画に属している Agent を記録
+                    agent.neighbor_agents.extend(
+                        env.get_neighbor_agents(agent)
+                    )
+                    agent.decide_action(
+                        0,
+                        self.env_size,
+                        0,
+                        self.env_size,
+                        public_sections,
+                        self.agent_moving,
+                        hour,
+                    )
+                # エージェントの位置を更新
+                for agent in env.agents:
+                    agent.do_action()
+
+        # 1日が終了したら、Agent の状態を更新
         for agent in env.agents:
-            agent.update_position()
+            agent.decide_next_status()
+        for agent in env.agents:
             agent.update_status()
 
         # 病院への収容・病院からの退院を実行
@@ -98,6 +112,8 @@ class Simulator:
         #     (空いた病床に新たな患者が入るのは早くても翌日になる)
         env.accommodate_to_hospital()
         env.leave_from_hospital()
+
+        return snap_shots
 
     def run(self):
         """ シミュレーションを実行 """
@@ -144,7 +160,7 @@ class Simulator:
 
             with tqdm(range(self.simulation_days)) as pbar:
                 for day in pbar:
-                    self.one_epoch(env)
+                    snap_shots = self.one_epoch(env, day + 1)
 
                     susceptable_num = env.count_susceptable()
                     infected_num = env.count_infected()
@@ -156,7 +172,7 @@ class Simulator:
                     self.i_values.append(infected_num)
                     self.r_values.append(recovered_num)
                     self.patients_values.append(patients_num)
-                    self.snap_shots.append(env.get_snap_shot_df())
+                    self.snap_shots.append(snap_shots)
 
                     pbar.set_description("[Run: Episode {}]".format(episode))
                     pbar.set_postfix(
@@ -168,13 +184,11 @@ class Simulator:
                             p=patients_num,
                         )
                     )
-                self.s_values_in_all_episode.append(self.s_values)
-                self.i_values_in_all_episode.append(self.i_values)
-                self.r_values_in_all_episode.append(self.r_values)
-                self.patients_values_in_all_episode.append(
-                    self.patients_values
-                )
-                self.snap_shots_in_all_episode.append(self.snap_shots)
+            self.s_values_in_all_episode.append(self.s_values)
+            self.i_values_in_all_episode.append(self.i_values)
+            self.r_values_in_all_episode.append(self.r_values)
+            self.patients_values_in_all_episode.append(self.patients_values)
+            self.snap_shots_in_all_episode.append(self.snap_shots)
         logger.info("シミュレーション終了")
 
     def clear_output_dirs(self):
@@ -417,7 +431,7 @@ class Simulator:
         plt.savefig(output_path)
         logger.info("病院の患者数集計グラフを出力しました")
 
-    def output_animation(self, interval=500):
+    def output_animation(self, interval=100):
         """ シミュレーション結果の動画を出力
 
         Parameters
@@ -435,37 +449,39 @@ class Simulator:
             plt.ylim(-margin, self.env_size + margin)
 
             artists = []
-            snap_shots = self.snap_shots_in_all_episode[episode]
-            with tqdm(snap_shots) as pbar:
-                for idx, df in enumerate(pbar):
+            snap_shots_in_days = self.snap_shots_in_all_episode[episode]
+            with tqdm(snap_shots_in_days) as pbar:
+                for d_idx, snap_shots_in_hours in enumerate(pbar):
                     pbar.set_description(
                         "[AnimationOutput: Episode {}]".format(episode)
                     )
 
-                    df.loc[
-                        df["status"] == Status.SUSCEPTABLE, "color"
-                    ] = "lightskyblue"
-                    df.loc[
-                        (df["status"] == Status.INFECTED)
-                        & ~(df["is_patient"]),
-                        "color",
-                    ] = "red"
-                    df.loc[
-                        (df["status"] == Status.INFECTED) & (df["is_patient"]),
-                        "color",
-                    ] = "darkgrey"
-                    df.loc[
-                        df["status"] == Status.RECOVERED, "color"
-                    ] = "lightgreen"
+                    for h_idx, df in enumerate(snap_shots_in_hours):
+                        df.loc[
+                            df["status"] == Status.SUSCEPTABLE, "color"
+                        ] = "lightskyblue"
+                        df.loc[
+                            (df["status"] == Status.INFECTED)
+                            & ~(df["is_patient"]),
+                            "color",
+                        ] = "red"
+                        df.loc[
+                            (df["status"] == Status.INFECTED)
+                            & (df["is_patient"]),
+                            "color",
+                        ] = "darkgrey"
+                        df.loc[
+                            df["status"] == Status.RECOVERED, "color"
+                        ] = "lightgreen"
 
-                    artist = plt.scatter(df["x"], df["y"], c=df["color"])
-                    title = plt.text(
-                        -margin,
-                        -margin,
-                        "Day:{}".format(idx + 1),
-                        fontsize="small",
-                    )
-                    artists.append([artist, title])
+                        artist = plt.scatter(df["x"], df["y"], c=df["color"])
+                        title = plt.text(
+                            -margin,
+                            -margin,
+                            "Day:{} Hour:{}".format(d_idx + 1, h_idx),
+                            fontsize="small",
+                        )
+                        artists.append([artist, title])
 
             anim = animation.ArtistAnimation(fig, artists, interval=interval)
             anim.save(

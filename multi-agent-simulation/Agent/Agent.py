@@ -51,23 +51,31 @@ class Agent:
         # 自身の周囲に存在するエージェント
         self.neighbor_agents = []
 
-    def decide_next_position(
-        self, x_min, x_max, y_min, y_max, public_sections, pattern
+    def decide_action(
+        self, x_min, x_max, y_min, y_max, public_sections, pattern, hour
     ):
         """ 次のエージェント位置を決定 """
-        # TODO: 行動に関する意思決定機能を追加
-
         if pattern == "freeze":
             self._stay_here()
             return
 
+        if hour == 21:
+            # 強制的に家に返す処理
+            self._stay_home()
+            return
+        elif 0 <= hour <= 6 or 21 < hour <= 23:
+            # 深夜・早朝は家から出ない
+            self.next_x = self.x
+            self.next_y = self.y
+            return
+
         if self.status == Status.INFECTED and self.has_subjective_symptoms:
-            # 自覚症状ありの感染者の場合、その場に留まる
+            # 自覚症状ありの感染者の場合、自宅に留まる
             self._stay_home()
             return
 
         if self.is_in_hospital:
-            # Hospitalに収容されている場合、その場に留まる
+            # Hospitalに収容されている場合、自宅に留まる
             self._stay_home()
             return
 
@@ -107,7 +115,7 @@ class Agent:
         y = random.uniform(section["y_min"], section["y_max"])
         return x, y
 
-    def update_position(self):
+    def do_action(self):
         """ エージェントの位置を更新 """
         self.x = self.next_x
         self.y = self.next_y
@@ -131,7 +139,7 @@ class Agent:
                 self.next_status = Status.INFECTED
 
         elif self.status == Status.SUSCEPTABLE:
-            # 未感染者は周囲の感染者に比例する確率で感染状態に移行
+            # 1日に接触した感染者に比例する確率で感染状態に移行
             # (Hospitalに収容されている感染者は除外)
             infected_agents = [
                 agent
@@ -148,6 +156,8 @@ class Agent:
                 self.next_status = Status.INFECTED
             else:
                 self.next_status = Status.SUSCEPTABLE
+
+            self.neighbor_agents = []
 
     def update_status(self):
         """ エージェントの状態を更新 """
