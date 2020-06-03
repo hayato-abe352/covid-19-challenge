@@ -1,13 +1,16 @@
 """
 環境定義
 """
+import math
 import random
 
+import matplotlib.patches as patches
+import matplotlib.pyplot as plt
 import pandas as pd
 from scipy.spatial.distance import cdist
 
-from Environment.Hospital import Hospital
 from Agent import Agent, Status
+from Environment.Hospital import Hospital
 
 
 class Environment:
@@ -31,8 +34,77 @@ class Environment:
         # 病院収容までの観察期間(観察期間分の日数が経過した感染者は病院に収容)
         self.observation_period = observation_period
 
+        # 区画分割数
+        self.section_div_num = 10
+        # 区画定義
+        self.sections = []
+        self.init_sections()
+
         # エージェント
         self.agents = []
+
+    def init_sections(self):
+        """ 環境を初期化 (区画分割と属性付与) """
+        section_size = self.env_size / self.section_div_num
+        sections = []
+        for x in range(self.section_div_num):
+            for y in range(self.section_div_num):
+                x_min = x * section_size
+                x_max = x_min + section_size
+                y_min = y * section_size
+                y_max = y_min + section_size
+
+                attribute = random.choices(
+                    ["public", "private"], weights=[1, 3]
+                )[0]
+
+                cell = {
+                    "address": (x, y),
+                    "x_min": x_min,
+                    "x_max": x_max,
+                    "y_min": y_min,
+                    "y_max": y_max,
+                    "attribute": attribute,
+                }
+                sections.append(cell)
+        self.sections = sections
+
+    def get_sections(self):
+        """ 区画情報を取得 """
+        return self.sections
+
+    def set_sections(self, sections):
+        """ 区画情報を設定 """
+        self.sections = sections
+
+    def output_section_map(self, path):
+        """ 区画マップを画像出力 """
+        plt.clf()
+        plt.title("Environment Section Map")
+        plt.figure()
+        ax = plt.axes()
+
+        margin = math.ceil(self.env_size * 0.05)
+        plt.xlim(-margin, self.env_size + margin)
+        plt.ylim(-margin, self.env_size + margin)
+
+        for section in self.sections:
+            fill_color = "#FFFCCC"
+            if section["attribute"] == "private":
+                fill_color = "#CCFFFC"
+
+            rect = patches.Rectangle(
+                xy=(section["x_min"], section["y_min"]),
+                width=section["x_max"] - section["x_min"],
+                height=section["y_max"] - section["y_min"],
+                ec="white",
+                fc=fill_color,
+            )
+            ax.add_patch(rect)
+
+        plt.axis("scaled")
+        ax.set_aspect("equal")
+        plt.savefig(path)
 
     def init_agents(self, infected_agents_num):
         """ 環境内に存在するエージェントを初期化 """
