@@ -82,7 +82,9 @@ class Agent:
 
     def _stay_home(self):
         """ [行動定義関数] ステイホーム """
-        pass
+        home = self.home_section
+        self.next_x, self.next_y = self._get_position_in_section(home)
+        self.next_section = self.home_section
 
     def _stay_here(self):
         """ [行動定義関数] その区画に留まる """
