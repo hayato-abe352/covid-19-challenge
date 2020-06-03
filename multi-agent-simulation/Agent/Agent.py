@@ -38,6 +38,11 @@ class Agent:
         # 自覚症状の有無
         self.has_subjective_symptoms = False
 
+        # 感染してからの経過日数
+        self.infection_duration = 0
+        # 病院の収容状況
+        self.is_in_hospital = False
+
         # 自身の周囲に存在するエージェント
         self.neighbor_agents = []
 
@@ -46,32 +51,62 @@ class Agent:
         # TODO: 行動に関する意思決定機能を追加
 
         if pattern == "freeze":
-            self.next_x = self.x
-            self.next_y = self.y
+            self._stay_here()
             return
 
         if self.status == Status.INFECTED and self.has_subjective_symptoms:
             # 自覚症状ありの感染者の場合、その場に留まる
-            self.next_x = self.x
-            self.next_y = self.y
+            self._stay_here()
             return
 
-        # 自身の周囲に存在する感染者(自覚症状がある者のみ)との距離の和を計算
+        if self.is_in_hospital:
+            # Hospitalに収容されている場合、その場に留まる
+            self._stay_here()
+            return
+
+        distance = 0.5
+        self._random_walk_away_from_infected(
+            distance, x_min, x_max, y_min, y_max
+        )
+
+    def _stay_here(self):
+        """ [行動定義関数] その場に留まる """
+        self.next_x = self.x
+        self.next_y = self.y
+
+    def _random_walk(self, distance, x_min, x_max, y_min, y_max):
+        """ [行動定義関数] ランダムウォーク """
+        while True:
+            # 移動先が指定範囲内に収まるまで繰り返す
+            next_x, next_y = self._2d_random_walk(distance)
+            if (x_min <= next_x <= x_max) and (y_min <= next_y <= y_max):
+                break
+
+        self.next_x = next_x
+        self.next_y = next_y
+
+    def _random_walk_away_from_infected(
+        self, distance, x_min, x_max, y_min, y_max
+    ):
+        """ [行動定義関数] 感染者から逃避するワンダムウォーク """
+        # 自身の周囲に存在する感染者との距離の和を計算
+        #   - 以下の条件のいずれかに該当する場合、距離計算から除外：
+        #       1. 自覚症状が無い場合 (周囲に感染者だと気づかれない)
+        #       2. Hospitalに収容されている場合 (周囲に影響を与えない)
         neighbor_infected = [
             n
             for n in self.neighbor_agents
-            if n.status == Status.INFECTED and n.has_subjective_symptoms
+            if n.status == Status.INFECTED
+            and n.has_subjective_symptoms
+            and not n.is_in_hospital
         ]
         current_sum_dist = self._get_sum_distance_to_infected(
             self.x, self.y, neighbor_infected
         )
 
-        # 移動距離
-        distance = 0.5
         while True:
-            direction = random.random() * 2.0 * math.pi
-            next_x = self.x + distance * math.cos(direction)
-            next_y = self.y + distance * math.sin(direction)
+            # 移動先が指定範囲内に収まるまで繰り返す
+            next_x, next_y = self._2d_random_walk(distance)
             next_sum_dist = self._get_sum_distance_to_infected(
                 next_x, next_y, neighbor_infected
             )
@@ -86,6 +121,13 @@ class Agent:
 
         self.next_x = next_x
         self.next_y = next_y
+
+    def _2d_random_walk(self, distance):
+        """ 2次元ランダムウォークのコアロジック """
+        direction = random.random() * 2.0 * math.pi
+        next_x = self.x + distance * math.cos(direction)
+        next_y = self.y + distance * math.sin(direction)
+        return next_x, next_y
 
     def _get_sum_distance_to_infected(self, x, y, neighbor_infected):
         """ 周囲に存在する感染者との距離の和を算出 """
@@ -121,10 +163,12 @@ class Agent:
 
         elif self.status == Status.SUSCEPTABLE:
             # 未感染者は周囲の感染者に比例する確率で感染状態に移行
+            # (Hospitalに収容されている感染者は除外)
             infected_agents = [
                 agent
                 for agent in self.neighbor_agents
                 if agent.status == Status.INFECTED
+                and not agent.is_in_hospital
             ]
 
             # len(infected_agents)人の感染者と接触したとき、一度でも感染する確率
@@ -139,6 +183,7 @@ class Agent:
 
     def update_status(self):
         """ エージェントの状態を更新 """
+        # 感染時の自覚症状発生判定
         if (
             self.status == Status.SUSCEPTABLE
             and self.next_status == Status.INFECTED
@@ -150,4 +195,13 @@ class Agent:
                 self.has_subjective_symptoms = False
         elif self.status == Status.RECOVERED:
             self.has_subjective_symptoms = False
+
+        # 感染中の経過日数インクリメント
+        if (
+            self.status == Status.INFECTED
+            and self.next_status == Status.INFECTED
+        ):
+            self.infection_duration += 1
+
+        # 状態変化を実行
         self.status = self.next_status

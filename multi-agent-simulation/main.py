@@ -15,6 +15,10 @@ SIMULATION_PARAMS = {
     "population": 200,
     # 初期感染者数
     "init_infected_num": 3,
+    # Hospitalキャパシティ
+    "hospital_capacity": 10,
+    # 病院収容までの観察期間
+    "observation_period": 5,
     # エージェントの動きパターン (moving/freeze)
     "agent_moving": "moving",
 }
@@ -45,17 +49,30 @@ def main():
     simulator.output_logs()
 
     # ラインチャート出力
-    simulator.output_line_charts()
+    simulator.output_sir_charts()
 
     # 集計結果出力
     episode_num = SIMULATION_PARAMS["episode_num"]
-    ss_prob = INFECTION_PARAMS["subjective_symptoms_prob"]
-    simulator.output_aggregated_line_chart(
-        title="TotalEpisode:{} SSprob:{}".format(episode_num, ss_prob)
+    h_capacity = SIMULATION_PARAMS["hospital_capacity"]
+    observation_period = SIMULATION_PARAMS["observation_period"]
+    title = "TotalEpisode:{} HC:{} OP:{}days".format(
+        episode_num, h_capacity, observation_period
     )
-    simulator.output_aggregated_line_chart(
-        title="TotalEpisode:{} SSprob:{}".format(episode_num, ss_prob),
-        estimator=None,
+    simulator.output_aggregated_sir_chart(title=title)
+    simulator.output_aggregated_sir_chart(
+        title=title, estimator=None,
+    )
+
+    # 病院の患者数推移を出力
+    h_capacity = SIMULATION_PARAMS["hospital_capacity"]
+    simulator.output_hospital_patients_charts(h_capacity)
+
+    # 病院の患者数集計結果を出力
+    simulator.output_hospital_patients_aggregated_chart(
+        h_capacity, title=title
+    )
+    simulator.output_hospital_patients_aggregated_chart(
+        h_capacity, title=title, estimator=None
     )
 
     # アニメーション出力
