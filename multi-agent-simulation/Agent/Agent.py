@@ -1,14 +1,13 @@
 """
 エージェント定義
 """
-import math
 import random
 
 from Agent.Status import Status
 
 
 class Agent:
-    def __init__(self, id, x, y, status, infection_model):
+    def __init__(self, id, x, y, home, status, infection_model):
         # 個体識別番号
         self.id = id
 
@@ -17,6 +16,12 @@ class Agent:
         self.y = y
         self.next_x = None
         self.next_y = None
+
+        # エージェントのホーム区画
+        self.home_section = home
+        # エージェントの現在の区画
+        self.current_section = home
+        self.next_section = None
 
         # エージェントの感染確率( S => I の確率)
         self.infection_prob = infection_model.infection_prob
@@ -46,7 +51,9 @@ class Agent:
         # 自身の周囲に存在するエージェント
         self.neighbor_agents = []
 
-    def decide_next_position(self, x_min, x_max, y_min, y_max, pattern):
+    def decide_next_position(
+        self, x_min, x_max, y_min, y_max, public_sections, pattern
+    ):
         """ 次のエージェント位置を決定 """
         # TODO: 行動に関する意思決定機能を追加
 
@@ -56,87 +63,47 @@ class Agent:
 
         if self.status == Status.INFECTED and self.has_subjective_symptoms:
             # 自覚症状ありの感染者の場合、その場に留まる
-            self._stay_here()
+            self._stay_home()
             return
 
         if self.is_in_hospital:
             # Hospitalに収容されている場合、その場に留まる
-            self._stay_here()
+            self._stay_home()
             return
 
-        distance = 0.5
-        self._random_walk_away_from_infected(
-            distance, x_min, x_max, y_min, y_max
-        )
+        # [その場に留まる]/[家に帰る]/[別の公共区画に移動する] をランダムに選択
+        action = random.choice(["stay", "home", "move"])
+        if action == "stay":
+            self._stay_here()
+        elif action == "home":
+            self._stay_home()
+        else:
+            self._move_other_section(public_sections)
+
+    def _stay_home(self):
+        """ [行動定義関数] ステイホーム """
+        pass
 
     def _stay_here(self):
-        """ [行動定義関数] その場に留まる """
-        self.next_x = self.x
-        self.next_y = self.y
+        """ [行動定義関数] その区画に留まる """
+        current_sec = self.current_section
+        self.next_x, self.next_y = self._get_position_in_section(current_sec)
+        self.next_section = self.current_section
 
-    def _random_walk(self, distance, x_min, x_max, y_min, y_max):
-        """ [行動定義関数] ランダムウォーク """
-        while True:
-            # 移動先が指定範囲内に収まるまで繰り返す
-            next_x, next_y = self._2d_random_walk(distance)
-            if (x_min <= next_x <= x_max) and (y_min <= next_y <= y_max):
-                break
-
-        self.next_x = next_x
-        self.next_y = next_y
-
-    def _random_walk_away_from_infected(
-        self, distance, x_min, x_max, y_min, y_max
-    ):
-        """ [行動定義関数] 感染者から逃避するワンダムウォーク """
-        # 自身の周囲に存在する感染者との距離の和を計算
-        #   - 以下の条件のいずれかに該当する場合、距離計算から除外：
-        #       1. 自覚症状が無い場合 (周囲に感染者だと気づかれない)
-        #       2. Hospitalに収容されている場合 (周囲に影響を与えない)
-        neighbor_infected = [
-            n
-            for n in self.neighbor_agents
-            if n.status == Status.INFECTED
-            and n.has_subjective_symptoms
-            and not n.is_in_hospital
-        ]
-        current_sum_dist = self._get_sum_distance_to_infected(
-            self.x, self.y, neighbor_infected
+    def _move_other_section(self, public_sections):
+        """ [行動定義関数] 別の区画に移動する """
+        # 公共区画の中からランダムに１つ選択 (現在の区画は除外)
+        next_sec = random.choice(
+            [sec for sec in public_sections if sec != self.current_section]
         )
+        self.next_x, self.next_y = self._get_position_in_section(next_sec)
+        self.next_section = next_sec
 
-        while True:
-            # 移動先が指定範囲内に収まるまで繰り返す
-            next_x, next_y = self._2d_random_walk(distance)
-            next_sum_dist = self._get_sum_distance_to_infected(
-                next_x, next_y, neighbor_infected
-            )
-
-            if current_sum_dist >= next_sum_dist:
-                # 感染者に近づいてしまう場合は、その場に留まる
-                next_x = self.x
-                next_y = self.y
-
-            if (x_min <= next_x <= x_max) and (y_min <= next_y <= y_max):
-                break
-
-        self.next_x = next_x
-        self.next_y = next_y
-
-    def _2d_random_walk(self, distance):
-        """ 2次元ランダムウォークのコアロジック """
-        direction = random.random() * 2.0 * math.pi
-        next_x = self.x + distance * math.cos(direction)
-        next_y = self.y + distance * math.sin(direction)
-        return next_x, next_y
-
-    def _get_sum_distance_to_infected(self, x, y, neighbor_infected):
-        """ 周囲に存在する感染者との距離の和を算出 """
-        sum_distance = 0.0
-        for neighbor in neighbor_infected:
-            sum_distance += math.sqrt(
-                ((x - neighbor.x) ** 2) + ((y - neighbor.y) ** 2)
-            )
-        return sum_distance
+    def _get_position_in_section(self, section):
+        """ [補助関数] セクション内のランダムな位置を取得 """
+        x = random.uniform(section["x_min"], section["x_max"])
+        y = random.uniform(section["y_min"], section["y_max"])
+        return x, y
 
     def update_position(self):
         """ エージェントの位置を更新 """
@@ -167,8 +134,7 @@ class Agent:
             infected_agents = [
                 agent
                 for agent in self.neighbor_agents
-                if agent.status == Status.INFECTED
-                and not agent.is_in_hospital
+                if agent.status == Status.INFECTED and not agent.is_in_hospital
             ]
 
             # len(infected_agents)人の感染者と接触したとき、一度でも感染する確率

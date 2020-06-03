@@ -109,10 +109,19 @@ class Environment:
     def init_agents(self, infected_agents_num):
         """ 環境内に存在するエージェントを初期化 """
         for id in range(self.agent_num):
-            x = random.random() * self.env_size
-            y = random.random() * self.env_size
+            # private 区画から１つをランダム抽出して home に設定
+            home = random.choice(
+                [sec for sec in self.sections if sec["attribute"] == "private"]
+            )
+
+            # home の座標空間内でランダムな位置を設定
+            x = random.uniform(home["x_min"], home["x_max"])
+            y = random.uniform(home["y_min"], home["y_max"])
+
+            # 初期ステータスを設定
             status = Status.SUSCEPTABLE
-            agent = Agent(id, x, y, status, self.infection_model)
+
+            agent = Agent(id, x, y, home, status, self.infection_model)
             self.agents.append(agent)
 
         # 生成したエージェントの中から、指定人数に感染症を付与
@@ -125,14 +134,11 @@ class Environment:
             self.agents[target_id].has_subjective_symptoms = True
 
     def get_neighbor_agents(self, agent):
-        """ 対象エージェントの周囲に存在するエージェントのリストを取得 """
-        base = [(agent.x, agent.y)]
-        targets = [(a.x, a.y) for a in self.agents]
-        dist = cdist(base, targets)[0].tolist()
+        """ 対象エージェントと同じ区画に属するエージェントのリストを取得 """
         neighbors = [
-            t
-            for i, t in enumerate(self.agents)
-            if dist[i] <= self.infection_model.influence_range
+            a
+            for a in self.agents
+            if a["address"] == agent.current_section["address"]
         ]
         return neighbors
 

@@ -71,11 +71,20 @@ class Simulator:
 
     def one_epoch(self, env):
         """ 1回のエピソードを実行 """
+        public_sections = [
+            sec for sec in env.sections if sec["attribute"] == "public"
+        ]
+
         # エージェントの次の位置・ステータスを決定
         for agent in env.agents:
             agent.neighbor_agents = env.get_neighbor_agents(agent)
             agent.decide_next_position(
-                0, self.env_size, 0, self.env_size, self.agent_moving
+                0,
+                self.env_size,
+                0,
+                self.env_size,
+                public_sections,
+                self.agent_moving,
             )
             agent.decide_next_status()
 
