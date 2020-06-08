@@ -8,6 +8,7 @@ import sys
 from collections import OrderedDict
 
 import matplotlib.animation as animation
+import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
@@ -68,6 +69,7 @@ class Simulator:
         self.r_values_in_all_episode = []
         self.patients_values_in_all_episode = []
         self.snap_shots_in_all_episode = []
+        self.section_maps = []
 
     def one_epoch(self, env, day):
         """ 1回のepochを実行 (1-epoch = 1-day) """
@@ -77,32 +79,33 @@ class Simulator:
 
         # 1時間ごとに Agent を行動させる
         snap_shots = []
-        with tqdm(range(24)) as pbar:
-            for hour in pbar:
-                pbar.set_description("[Day:{} Hour:{}]".format(day, hour))
-                snap_shots.append(env.get_snap_shot_df())
+        for hour in env.active_time:
+            snap_shots.append(env.get_snap_shot_df())
 
-                # エージェントの次の位置を決定
-                for agent in env.agents:
-                    # 同じ区画に属している Agent を記録
-                    agent.neighbor_agents.extend(
-                        env.get_neighbor_agents(agent)
-                    )
-                    agent.decide_action(
-                        0,
-                        self.env_size,
-                        0,
-                        self.env_size,
-                        public_sections,
-                        self.agent_moving,
-                        hour,
-                    )
-                # エージェントの位置を更新
-                for agent in env.agents:
-                    agent.do_action()
+            # エージェントの次の位置を決定
+            for agent in env.agents:
+                # 同じ区画に属している Agent を記録
+                agent.neighbor_agents.extend(env.get_neighbor_agents(agent))
+                agent.decide_action(
+                    0,
+                    self.env_size,
+                    0,
+                    self.env_size,
+                    public_sections,
+                    self.agent_moving,
+                    hour,
+                )
+            # エージェントの位置を更新
+            for agent in env.agents:
+                agent.do_action()
 
         # 1日が終了したら、Agent の状態を更新
+        inactive_time = 24 - len(env.active_time)
         for agent in env.agents:
+            # 外出中のエージェントを自宅に帰す
+            agent.go_back_home()
+            # familyと同居する影響を付与 (非アクティブ時間はfamilyと接触する)
+            agent.neighbor_agents.extend(agent.family * inactive_time)
             agent.decide_next_status()
         for agent in env.agents:
             agent.update_status()
@@ -139,6 +142,7 @@ class Simulator:
                 self.observation_period,
             )
             env.init_agents(self.init_infected_num)
+            self.section_maps.append(env.get_sections())
 
             # 初期状態を記録
             susceptable_num = env.count_susceptable()
@@ -241,6 +245,40 @@ class Simulator:
                     "outputs/logs/episode-{}.csv".format(episode), index=False
                 )
                 logger.info("episode-{}.csv を出力しました".format(episode))
+
+    def output_environment_section_map(self):
+        """ Environment の区画マップを出力 """
+        logger.info("区画マップ出力を開始します")
+        for episode, sections in tqdm(enumerate(self.section_maps)):
+            plt.clf()
+            plt.figure()
+            ax = plt.axes()
+
+            margin = math.ceil(self.env_size * 0.05)
+            plt.xlim(-margin, self.env_size + margin)
+            plt.ylim(-margin, self.env_size + margin)
+
+            for section in sections:
+                fill_color = "#FFFCCC"
+                if section["attribute"] == "private":
+                    fill_color = "#CCFFFC"
+
+                rect = patches.Rectangle(
+                    xy=(section["x_min"], section["y_min"]),
+                    width=section["x_max"] - section["x_min"],
+                    height=section["y_max"] - section["y_min"],
+                    ec="white",
+                    fc=fill_color,
+                )
+                ax.add_patch(rect)
+
+            plt.axis("scaled")
+            ax.set_aspect("equal")
+            plt.savefig(
+                "outputs/images/section-map-episode-{}.png".format(episode)
+            )
+
+        logger.info("区画マップを出力しました")
 
     def output_sir_charts(self):
         """ SIRチャートを出力 """
@@ -357,7 +395,7 @@ class Simulator:
         logger.info("病院の患者数遷移グラフの出力を開始します")
         for episode in range(self.episode_num):
             plt.clf()
-            plt.xlim(0, capacity)
+            plt.ylim(0, capacity)
 
             p_values = self.patients_values_in_all_episode[episode]
             df = pd.DataFrame(columns=["Day", "Count"])
@@ -396,7 +434,7 @@ class Simulator:
         """
         logger.info("病院の患者数集計グラフの出力を開始します")
         plt.clf()
-        plt.xlim(0, capacity)
+        plt.ylim(0, capacity)
         df = pd.DataFrame(columns=["Episode", "Day", "Count"])
         for episode in tqdm(range(self.episode_num)):
             p_values = self.patients_values_in_all_episode[episode]
@@ -442,7 +480,8 @@ class Simulator:
         logger.info("アニメーションの出力を開始します")
         for episode in range(self.episode_num):
             plt.clf()
-            fig = plt.figure(figsize=(5, 5))
+            fig = plt.figure()
+            ax = plt.axes()
 
             margin = math.ceil(self.env_size * 0.05)
             plt.xlim(-margin, self.env_size + margin)
@@ -450,6 +489,26 @@ class Simulator:
 
             artists = []
             snap_shots_in_days = self.snap_shots_in_all_episode[episode]
+            sections = self.section_maps[episode]
+
+            for section in sections:
+                color = "#FFFCCC"
+                if section["attribute"] == "private":
+                    color = "#CCFFFC"
+
+                rect = patches.Rectangle(
+                    xy=(section["x_min"], section["y_min"]),
+                    alpha=0.3,
+                    width=section["x_max"] - section["x_min"],
+                    height=section["y_max"] - section["y_min"],
+                    ec="lightgrey",
+                    fc=color
+                )
+                ax.add_patch(rect)
+
+            plt.axis("scaled")
+            ax.set_aspect("equal")
+
             with tqdm(snap_shots_in_days) as pbar:
                 for d_idx, snap_shots_in_hours in enumerate(pbar):
                     pbar.set_description(
@@ -474,11 +533,13 @@ class Simulator:
                             df["status"] == Status.RECOVERED, "color"
                         ] = "lightgreen"
 
-                        artist = plt.scatter(df["x"], df["y"], c=df["color"])
-                        title = plt.text(
+                        artist = ax.scatter(
+                            df["x"], df["y"], s=10, c=df["color"]
+                        )
+                        title = ax.text(
                             -margin,
                             -margin,
-                            "Day:{} Hour:{}".format(d_idx + 1, h_idx),
+                            "Day:{} Hour:{}".format(d_idx + 1, h_idx + 7),
                             fontsize="small",
                         )
                         artists.append([artist, title])

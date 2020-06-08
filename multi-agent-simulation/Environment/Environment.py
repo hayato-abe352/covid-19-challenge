@@ -41,6 +41,8 @@ class Environment:
 
         # エージェント
         self.agents = []
+        # エージェントの活動時間
+        self.active_time = list(range(7, 21))
 
     def init_sections(self):
         """ 環境を初期化 (区画分割と属性付与) """
@@ -76,35 +78,6 @@ class Environment:
         """ 区画情報を設定 """
         self.sections = sections
 
-    def output_section_map(self, path):
-        """ 区画マップを画像出力 """
-        plt.clf()
-        plt.title("Environment Section Map")
-        plt.figure()
-        ax = plt.axes()
-
-        margin = math.ceil(self.env_size * 0.05)
-        plt.xlim(-margin, self.env_size + margin)
-        plt.ylim(-margin, self.env_size + margin)
-
-        for section in self.sections:
-            fill_color = "#FFFCCC"
-            if section["attribute"] == "private":
-                fill_color = "#CCFFFC"
-
-            rect = patches.Rectangle(
-                xy=(section["x_min"], section["y_min"]),
-                width=section["x_max"] - section["x_min"],
-                height=section["y_max"] - section["y_min"],
-                ec="white",
-                fc=fill_color,
-            )
-            ax.add_patch(rect)
-
-        plt.axis("scaled")
-        ax.set_aspect("equal")
-        plt.savefig(path)
-
     def init_agents(self, infected_agents_num):
         """ 環境内に存在するエージェントを初期化 """
         for id in range(self.agent_num):
@@ -122,6 +95,15 @@ class Environment:
 
             agent = Agent(id, x, y, home, status, self.infection_model)
             self.agents.append(agent)
+
+        for agent in self.agents:
+            # 家族情報を付与
+            family = [
+                a
+                for a in self.agents
+                if a.home_section["address"] == agent.home_section["address"]
+            ]
+            agent.family = family
 
         # 生成したエージェントの中から、指定人数に感染症を付与
         # (初期感染者は必ず自覚症状を持つ)

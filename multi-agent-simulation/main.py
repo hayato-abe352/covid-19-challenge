@@ -6,17 +6,17 @@ from Simulator import Infection, Simulator
 # シミュレーションパラメータ
 SIMULATION_PARAMS = {
     # シミュレーション日数
-    "simulation_days": 150,
+    "simulation_days": 90,
     # シミュレーションの繰り返し数
-    "episode_num": 1,
+    "episode_num": 10,
     # 環境サイズ
     "env_size": 10,
     # 総人口
     "population": 100,
     # 初期感染者数
-    "init_infected_num": 3,
+    "init_infected_num": 5,
     # Hospitalキャパシティ
-    "hospital_capacity": 10,
+    "hospital_capacity": 0,
     # 病院収容までの観察期間
     "observation_period": 5,
     # エージェントの動きパターン (moving/freeze)
@@ -32,7 +32,7 @@ INFECTION_PARAMS = {
     # 抗体獲得率
     "antibody_acquisition_prob": 1.0,
     # 自覚症状の発生確率
-    "subjective_symptoms_prob": 0.8,
+    "subjective_symptoms_prob": 0.5,
     # 濃厚接触半径
     "influence_range": 2,
 }
@@ -44,6 +44,9 @@ def main():
 
     # シミュレーション実行
     simulator.run()
+
+    # 区画マップ出力
+    simulator.output_environment_section_map()
 
     # ログ出力
     simulator.output_logs()

@@ -23,6 +23,9 @@ class Agent:
         self.current_section = home
         self.next_section = None
 
+        # エージェントの家族 (同じhomeを持つAgent)
+        self.family = []
+
         # エージェントの感染確率( S => I の確率)
         self.infection_prob = infection_model.infection_prob
         # エージェントの回復確率( I => R の確率)
@@ -59,16 +62,6 @@ class Agent:
             self._stay_here()
             return
 
-        if hour == 21:
-            # 強制的に家に返す処理
-            self._stay_home()
-            return
-        elif 0 <= hour <= 6 or 21 < hour <= 23:
-            # 深夜・早朝は家から出ない
-            self.next_x = self.x
-            self.next_y = self.y
-            return
-
         if self.status == Status.INFECTED and self.has_subjective_symptoms:
             # 自覚症状ありの感染者の場合、自宅に留まる
             self._stay_home()
@@ -79,14 +72,19 @@ class Agent:
             self._stay_home()
             return
 
-        # [その場に留まる]/[家に帰る]/[別の公共区画に移動する] をランダムに選択
-        action = random.choice(["stay", "home", "move"])
-        if action == "stay":
-            self._stay_here()
-        elif action == "home":
+        # [その場に留まる]/[別の公共区画に移動する] をランダムに選択
+        action = random.choice(["stay", "move"])
+        if action == "home":
             self._stay_home()
+        elif action == "stay":
+            self._stay_here()
         else:
             self._move_other_section(public_sections)
+    
+    def go_back_home(self):
+        """ エージェントを自宅に帰す """
+        self._stay_home()
+        self.do_action()
 
     def _stay_home(self):
         """ [行動定義関数] ステイホーム """
@@ -119,6 +117,7 @@ class Agent:
         """ エージェントの位置を更新 """
         self.x = self.next_x
         self.y = self.next_y
+        self.current_section = self.next_section
 
     def decide_next_status(self):
         """ 次のエージェント状態を決定 """
