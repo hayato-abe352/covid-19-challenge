@@ -28,13 +28,13 @@ class Visualizer:
         rectangle = patches.Rectangle
         for section in section_map:
             fill_color = (
-                "#FFFCCC" if section["attribute"] == "public" else "#CCFFFC"
+                "#FFFCCC" if section.attribute == "public" else "#CCFFFC"
             )
 
             rect = rectangle(
-                xy=(section["x_min"], section["y_min"]),
-                width=section["x_max"] - section["x_min"],
-                height=section["y_max"] - section["y_min"],
+                xy=(section.x_min, section.y_min),
+                width=section.x_max - section.x_min,
+                height=section.y_max - section.y_min,
                 ec="white",
                 fc=fill_color,
             )
@@ -233,13 +233,13 @@ class Visualizer:
         rectangle = patches.Rectangle
         for section in section_map:
             fill_color = (
-                "#FFFCCC" if section["attribute"] == "public" else "#CCFFFC"
+                "#FFFCCC" if section.attribute == "public" else "#CCFFFC"
             )
 
             rect = rectangle(
-                xy=(section["x_min"], section["y_min"]),
-                width=section["x_max"] - section["x_min"],
-                height=section["y_max"] - section["y_min"],
+                xy=(section.x_min, section.y_min),
+                width=section.x_max - section.x_min,
+                height=section.y_max - section.y_min,
                 ec="lightgrey",
                 fc=fill_color,
                 alpha=0.3,

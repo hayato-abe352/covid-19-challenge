@@ -107,8 +107,8 @@ class Agent:
 
     def _get_position_in_section(self, section):
         """ [補助関数] セクション内のランダムな位置を取得 """
-        x = random.uniform(section["x_min"], section["x_max"])
-        y = random.uniform(section["y_min"], section["y_max"])
+        x = random.uniform(section.x_min, section.x_max)
+        y = random.uniform(section.y_min, section.y_max)
         return x, y
 
     def do_action(self):

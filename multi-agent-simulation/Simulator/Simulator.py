@@ -58,7 +58,7 @@ class Simulator:
     def one_epoch(self, env, day):
         """ 1回のepochを実行 (1-epoch = 1-day) """
         public_sections = [
-            sec for sec in env.sections if sec["attribute"] == "public"
+            sec for sec in env.sections if sec.attribute == "public"
         ]
 
         # 1時間ごとに Agent を行動させる

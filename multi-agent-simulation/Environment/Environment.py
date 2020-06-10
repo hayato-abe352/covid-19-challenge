@@ -7,6 +7,7 @@ import pandas as pd
 
 from Agent import Agent, Status
 from Environment.Hospital import Hospital
+from Environment.Section import Section
 
 
 class Environment:
@@ -57,15 +58,15 @@ class Environment:
                     ["public", "private"], weights=[1, 3]
                 )[0]
 
-                cell = {
-                    "address": (x, y),
-                    "x_min": x_min,
-                    "x_max": x_max,
-                    "y_min": y_min,
-                    "y_max": y_max,
-                    "attribute": attribute,
-                }
-                sections.append(cell)
+                section = Section(
+                    address=(x, y),
+                    x_min=x_min,
+                    x_max=x_max,
+                    y_min=y_min,
+                    y_max=y_max,
+                    attribute=attribute
+                )
+                sections.append(section)
         self.sections = sections
 
     def get_sections(self):
@@ -83,12 +84,12 @@ class Environment:
         for id in range(self.agent_num):
             # private 区画から１つをランダム抽出して home に設定
             home = random_choice(
-                [sec for sec in self.sections if sec["attribute"] == "private"]
+                [sec for sec in self.sections if sec.attribute == "private"]
             )
 
             # home の座標空間内でランダムな位置を設定
-            x = random_uniform(home["x_min"], home["x_max"])
-            y = random_uniform(home["y_min"], home["y_max"])
+            x = random_uniform(home.x_min, home.x_max)
+            y = random_uniform(home.y_min, home.y_max)
 
             # 初期ステータスを設定
             status = Status.SUSCEPTABLE
@@ -101,7 +102,7 @@ class Environment:
             family = [
                 a
                 for a in self.agents
-                if a.home_section["address"] == agent.home_section["address"]
+                if a.home_section.address == agent.home_section.address
             ]
             agent.family = family
 
@@ -119,7 +120,7 @@ class Environment:
         neighbors = [
             a
             for a in self.agents
-            if a.current_section["address"] == agent.current_section["address"]
+            if a.current_section.address == agent.current_section.address
         ]
         return neighbors
 
