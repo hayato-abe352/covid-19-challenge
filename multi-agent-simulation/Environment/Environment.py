@@ -1,11 +1,8 @@
 """
 環境定義
 """
-import math
 import random
 
-import matplotlib.patches as patches
-import matplotlib.pyplot as plt
 import pandas as pd
 
 from Agent import Agent, Status

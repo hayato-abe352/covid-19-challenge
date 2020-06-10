@@ -57,7 +57,7 @@ class Agent:
     def decide_action(
         self, x_min, x_max, y_min, y_max, public_sections, pattern, hour
     ):
-        """ 次のエージェント位置を決定 """
+        """ エージェントのアクションを決定 """
         if pattern == "freeze":
             self._stay_here()
             return
@@ -74,13 +74,11 @@ class Agent:
 
         # [その場に留まる]/[別の公共区画に移動する] をランダムに選択
         action = random.choice(["stay", "move"])
-        if action == "home":
-            self._stay_home()
-        elif action == "stay":
+        if action == "stay":
             self._stay_here()
         else:
             self._move_other_section(public_sections)
-    
+
     def go_back_home(self):
         """ エージェントを自宅に帰す """
         self._stay_home()
@@ -114,7 +112,7 @@ class Agent:
         return x, y
 
     def do_action(self):
-        """ エージェントの位置を更新 """
+        """ エージェントのアクションを実行 """
         self.x = self.next_x
         self.y = self.next_y
         self.current_section = self.next_section
