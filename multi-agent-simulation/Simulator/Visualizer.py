@@ -25,12 +25,13 @@ class Visualizer:
         plt.xlim(-margin, env_size + margin)
         plt.ylim(-margin, env_size + margin)
 
+        rectangle = patches.Rectangle
         for section in section_map:
             fill_color = (
                 "#FFFCCC" if section["attribute"] == "public" else "#CCFFFC"
             )
 
-            rect = patches.Rectangle(
+            rect = rectangle(
                 xy=(section["x_min"], section["y_min"]),
                 width=section["x_max"] - section["x_min"],
                 height=section["y_max"] - section["y_min"],
@@ -229,12 +230,13 @@ class Visualizer:
         plt.ylim(-margin, env_size + margin)
 
         artists = []
+        rectangle = patches.Rectangle
         for section in section_map:
             fill_color = (
                 "#FFFCCC" if section["attribute"] == "public" else "#CCFFFC"
             )
 
-            rect = patches.Rectangle(
+            rect = rectangle(
                 xy=(section["x_min"], section["y_min"]),
                 width=section["x_max"] - section["x_min"],
                 height=section["y_max"] - section["y_min"],
@@ -247,6 +249,8 @@ class Visualizer:
         plt.axis("scaled")
         ax.set_aspect("equal")
 
+        scatter = ax.scatter
+        text = ax.text
         with tqdm(snap_shots) as pbar:
             for d_idx, snap_shots_in_hours in enumerate(pbar):
                 pbar.set_description(
@@ -270,8 +274,8 @@ class Visualizer:
                         df["status"] == Status.RECOVERED, "color"
                     ] = "lightgreen"
 
-                    artist = ax.scatter(df["x"], df["y"], s=10, c=df["color"])
-                    title = ax.text(
+                    artist = scatter(df["x"], df["y"], s=10, c=df["color"])
+                    title = text(
                         -margin,
                         -margin,
                         "Day:{} Hour:{}".format(d_idx + 1, h_idx + 7),

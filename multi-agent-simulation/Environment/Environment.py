@@ -45,6 +45,7 @@ class Environment:
         """ 環境を初期化 (区画分割と属性付与) """
         section_size = self.env_size / self.section_div_num
         sections = []
+        random_choices = random.choices
         for x in range(self.section_div_num):
             for y in range(self.section_div_num):
                 x_min = x * section_size
@@ -52,7 +53,7 @@ class Environment:
                 y_min = y * section_size
                 y_max = y_min + section_size
 
-                attribute = random.choices(
+                attribute = random_choices(
                     ["public", "private"], weights=[1, 3]
                 )[0]
 
@@ -77,15 +78,17 @@ class Environment:
 
     def init_agents(self, infected_agents_num):
         """ 環境内に存在するエージェントを初期化 """
+        random_choice = random.choice
+        random_uniform = random.uniform
         for id in range(self.agent_num):
             # private 区画から１つをランダム抽出して home に設定
-            home = random.choice(
+            home = random_choice(
                 [sec for sec in self.sections if sec["attribute"] == "private"]
             )
 
             # home の座標空間内でランダムな位置を設定
-            x = random.uniform(home["x_min"], home["x_max"])
-            y = random.uniform(home["y_min"], home["y_max"])
+            x = random_uniform(home["x_min"], home["x_max"])
+            y = random_uniform(home["y_min"], home["y_max"])
 
             # 初期ステータスを設定
             status = Status.SUSCEPTABLE

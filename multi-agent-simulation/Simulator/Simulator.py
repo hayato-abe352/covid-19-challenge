@@ -187,27 +187,30 @@ class Simulator:
     def output_logs(self):
         """ シミュレーションログを出力 """
         logger.info("ログ出力を開始します")
+        output_logs = self.recorder.output_logs
         for episode in range(self.episode_num):
             path = "outputs/logs/episode-{}.csv".format(episode)
-            self.recorder.output_logs(episode, path)
+            output_logs(episode, path)
             logger.info("episode-{}.csv を出力しました".format(episode))
 
     def output_environment_section_map(self):
         """ Environment の区画マップを出力 """
         logger.info("区画マップ出力を開始します")
         section_maps = self.recorder.get_section_maps()
+        output_section_map = Visualizer.output_section_map
         for episode, section_map in tqdm(enumerate(section_maps)):
             path = "outputs/images/section-map-episode-{}.png".format(episode)
-            Visualizer.output_section_map(section_map, self.env_size, path)
+            output_section_map(section_map, self.env_size, path)
         logger.info("区画マップを出力しました")
 
     def output_sir_charts(self):
         """ SIRチャートを出力 """
         logger.info("ラインチャート出力を開始します")
+        output_sir_chart = Visualizer.output_sir_chart
         for episode in range(self.episode_num):
             s, i, r = self.recorder.get_simulation_sir(episode)
             path = "outputs/images/episode-{}.png".format(episode)
-            Visualizer.output_sir_chart(episode, s, i, r, path)
+            output_sir_chart(episode, s, i, r, path)
             logger.info("episode-{}.png を出力しました".format(episode))
 
     def output_aggregated_sir_chart(self, title=None, estimator="mean"):
@@ -234,10 +237,13 @@ class Simulator:
     def output_hospital_patients_charts(self):
         """ 病院の患者数遷移ラインチャートを出力 """
         logger.info("病院の患者数遷移グラフの出力を開始します")
+        output_hospital_patients_chart = (
+            Visualizer.output_hospital_patients_chart
+        )
         for episode in range(self.episode_num):
             p = self.recorder.get_simulation_patients(episode)
             path = "outputs/images/patients-episode-{}.png".format(episode)
-            Visualizer.output_hospital_patients_chart(
+            output_hospital_patients_chart(
                 episode, self.hospital_capacity, p, path
             )
             logger.info("patients-episode-{}.png を出力しました".format(episode))
@@ -276,11 +282,12 @@ class Simulator:
             フレーム切り替え時間[ms]（デフォルトは200ms）
         """
         logger.info("アニメーションの出力を開始します")
+        output_animation = Visualizer.output_animation
         for episode in range(self.episode_num):
             snap_shots = self.recorder.get_simulation_snap_shots(episode)
             section_map = self.recorder.get_section_maps(episode)
             path = "outputs/animations/episode-{}.mp4".format(episode)
-            Visualizer.output_animation(
+            output_animation(
                 episode, snap_shots, section_map, self.env_size, path, interval
             )
             logger.info("episode-{}.mp4 を出力しました".format(episode))
