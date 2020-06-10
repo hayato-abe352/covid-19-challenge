@@ -4,10 +4,10 @@
 import random
 
 import pandas as pd
-from scipy.spatial.distance import cdist
 
-from Environment.Hospital import Hospital
 from Agent import Agent, Status
+from Environment.Hospital import Hospital
+from Environment.Section import Section
 
 
 class Environment:
@@ -31,17 +31,80 @@ class Environment:
         # 病院収容までの観察期間(観察期間分の日数が経過した感染者は病院に収容)
         self.observation_period = observation_period
 
+        # 区画分割数
+        self.section_div_num = 10
+        # 区画定義
+        self.sections = []
+        self.init_sections()
+
         # エージェント
         self.agents = []
+        # エージェントの活動時間
+        self.active_time = list(range(7, 21))
+
+    def init_sections(self):
+        """ 環境を初期化 (区画分割と属性付与) """
+        section_size = self.env_size / self.section_div_num
+        sections = []
+        random_choices = random.choices
+        for x in range(self.section_div_num):
+            for y in range(self.section_div_num):
+                x_min = x * section_size
+                x_max = x_min + section_size
+                y_min = y * section_size
+                y_max = y_min + section_size
+
+                attribute = random_choices(
+                    ["public", "private"], weights=[1, 3]
+                )[0]
+
+                section = Section(
+                    address=(x, y),
+                    x_min=x_min,
+                    x_max=x_max,
+                    y_min=y_min,
+                    y_max=y_max,
+                    attribute=attribute
+                )
+                sections.append(section)
+        self.sections = sections
+
+    def get_sections(self):
+        """ 区画情報を取得 """
+        return self.sections
+
+    def set_sections(self, sections):
+        """ 区画情報を設定 """
+        self.sections = sections
 
     def init_agents(self, infected_agents_num):
         """ 環境内に存在するエージェントを初期化 """
+        random_choice = random.choice
+        random_uniform = random.uniform
         for id in range(self.agent_num):
-            x = random.random() * self.env_size
-            y = random.random() * self.env_size
+            # private 区画から１つをランダム抽出して home に設定
+            home = random_choice(
+                [sec for sec in self.sections if sec.attribute == "private"]
+            )
+
+            # home の座標空間内でランダムな位置を設定
+            x = random_uniform(home.x_min, home.x_max)
+            y = random_uniform(home.y_min, home.y_max)
+
+            # 初期ステータスを設定
             status = Status.SUSCEPTABLE
-            agent = Agent(id, x, y, status, self.infection_model)
+
+            agent = Agent(id, x, y, home, status, self.infection_model)
             self.agents.append(agent)
+
+        for agent in self.agents:
+            # 家族情報を付与
+            family = [
+                a
+                for a in self.agents
+                if a.home_section.address == agent.home_section.address
+            ]
+            agent.family = family
 
         # 生成したエージェントの中から、指定人数に感染症を付与
         # (初期感染者は必ず自覚症状を持つ)
@@ -53,14 +116,11 @@ class Environment:
             self.agents[target_id].has_subjective_symptoms = True
 
     def get_neighbor_agents(self, agent):
-        """ 対象エージェントの周囲に存在するエージェントのリストを取得 """
-        base = [(agent.x, agent.y)]
-        targets = [(a.x, a.y) for a in self.agents]
-        dist = cdist(base, targets)[0].tolist()
+        """ 対象エージェントと同じ区画に属するエージェントのリストを取得 """
         neighbors = [
-            t
-            for i, t in enumerate(self.agents)
-            if dist[i] <= self.infection_model.influence_range
+            a
+            for a in self.agents
+            if a.current_section.address == agent.current_section.address
         ]
         return neighbors
 
