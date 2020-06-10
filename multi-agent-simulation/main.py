@@ -6,9 +6,9 @@ from Simulator import Infection, Simulator
 # シミュレーションパラメータ
 SIMULATION_PARAMS = {
     # シミュレーション日数
-    "simulation_days": 90,
+    "simulation_days": 30,
     # シミュレーションの繰り返し数
-    "episode_num": 10,
+    "episode_num": 3,
     # 環境サイズ
     "env_size": 10,
     # 総人口
@@ -16,7 +16,7 @@ SIMULATION_PARAMS = {
     # 初期感染者数
     "init_infected_num": 5,
     # Hospitalキャパシティ
-    "hospital_capacity": 0,
+    "hospital_capacity": 5,
     # 病院収容までの観察期間
     "observation_period": 5,
     # エージェントの動きパターン (moving/freeze)
@@ -67,15 +67,12 @@ def main():
     )
 
     # 病院の患者数推移を出力
-    h_capacity = SIMULATION_PARAMS["hospital_capacity"]
-    simulator.output_hospital_patients_charts(h_capacity)
+    simulator.output_hospital_patients_charts()
 
     # 病院の患者数集計結果を出力
+    simulator.output_hospital_patients_aggregated_chart(title=title)
     simulator.output_hospital_patients_aggregated_chart(
-        h_capacity, title=title
-    )
-    simulator.output_hospital_patients_aggregated_chart(
-        h_capacity, title=title, estimator=None
+        title=title, estimator=None
     )
 
     # アニメーション出力

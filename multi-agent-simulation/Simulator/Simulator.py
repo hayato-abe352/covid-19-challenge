@@ -2,21 +2,16 @@
 MASシミュレーター
 """
 import glob
-import math
 import os
 import sys
 from collections import OrderedDict
 
-import matplotlib.animation as animation
-import matplotlib.patches as patches
-import matplotlib.pyplot as plt
-import pandas as pd
-import seaborn as sns
 from loguru import logger
 from tqdm import tqdm
 
-from Agent import Status
 from Environment import Environment
+from Simulator import Recorder
+from Simulator.Visualizer import Visualizer
 
 logger.remove()
 logger.add(sys.stdout, colorize=True, backtrace=False, diagnose=False)
@@ -57,19 +52,8 @@ class Simulator:
         # エージェントの移動パターン
         self.agent_moving = agent_moving
 
-        # グラフ描画用
-        self.t_values = []
-        self.s_values = []
-        self.i_values = []
-        self.r_values = []
-        self.patients_values = []
-        self.snap_shots = []
-        self.s_values_in_all_episode = []
-        self.i_values_in_all_episode = []
-        self.r_values_in_all_episode = []
-        self.patients_values_in_all_episode = []
-        self.snap_shots_in_all_episode = []
-        self.section_maps = []
+        # データ記録
+        self.recorder = Recorder(simulation_days)
 
     def one_epoch(self, env, day):
         """ 1回のepochを実行 (1-epoch = 1-day) """
@@ -122,11 +106,7 @@ class Simulator:
         """ シミュレーションを実行 """
         self.clear_output_dirs()
 
-        self.s_values_in_all_episode = []
-        self.i_values_in_all_episode = []
-        self.r_values_in_all_episode = []
-        self.patients_values_in_all_episode = []
-        self.snap_shots_in_all_episode = []
+        self.recorder.clear_simulation_records()
         logger.info(
             "シミュレーション開始 Episode: {} (Day: {})".format(
                 self.episode_num, self.simulation_days
@@ -142,7 +122,7 @@ class Simulator:
                 self.observation_period,
             )
             env.init_agents(self.init_infected_num)
-            self.section_maps.append(env.get_sections())
+            self.recorder.append_section_map(env.get_sections())
 
             # 初期状態を記録
             susceptable_num = env.count_susceptable()
@@ -155,12 +135,10 @@ class Simulator:
                 )
             )
 
-            self.t_values = [0]
-            self.s_values = [susceptable_num]
-            self.i_values = [infected_num]
-            self.r_values = [recovered_num]
-            self.patients_values = [patients_num]
-            self.snap_shots = []
+            self.recorder.clear_episode_record()
+            self.recorder.append_sirp(
+                susceptable_num, infected_num, recovered_num, patients_num
+            )
 
             with tqdm(range(self.simulation_days)) as pbar:
                 for day in pbar:
@@ -171,12 +149,13 @@ class Simulator:
                     recovered_num = env.count_recovered()
                     patients_num = env.count_hospital_parients()
 
-                    self.t_values.append(day + 1)
-                    self.s_values.append(susceptable_num)
-                    self.i_values.append(infected_num)
-                    self.r_values.append(recovered_num)
-                    self.patients_values.append(patients_num)
-                    self.snap_shots.append(snap_shots)
+                    self.recorder.append_sirp(
+                        susceptable_num,
+                        infected_num,
+                        recovered_num,
+                        patients_num,
+                    )
+                    self.recorder.append_snap_shot(snap_shots)
 
                     pbar.set_description("[Run: Episode {}]".format(episode))
                     pbar.set_postfix(
@@ -188,11 +167,7 @@ class Simulator:
                             p=patients_num,
                         )
                     )
-            self.s_values_in_all_episode.append(self.s_values)
-            self.i_values_in_all_episode.append(self.i_values)
-            self.r_values_in_all_episode.append(self.r_values)
-            self.patients_values_in_all_episode.append(self.patients_values)
-            self.snap_shots_in_all_episode.append(self.snap_shots)
+            self.recorder.update_simulation_records()
         logger.info("シミュレーション終了")
 
     def clear_output_dirs(self):
@@ -213,115 +188,26 @@ class Simulator:
         """ シミュレーションログを出力 """
         logger.info("ログ出力を開始します")
         for episode in range(self.episode_num):
-            s_values = self.s_values_in_all_episode[episode]
-            i_values = self.i_values_in_all_episode[episode]
-            r_values = self.r_values_in_all_episode[episode]
-            p_values = self.patients_values_in_all_episode[episode]
-            df = pd.DataFrame(
-                columns=[
-                    "Day",
-                    "Susceptable",
-                    "Infected",
-                    "Recovered",
-                    "Patients",
-                ]
-            )
-            with tqdm(
-                zip(self.t_values, s_values, i_values, r_values, p_values),
-                total=len(self.t_values),
-            ) as pbar:
-                for t, s, i, r, p in pbar:
-                    pbar.set_description(
-                        "[LogOutput: Episode {}]".format(episode)
-                    )
-                    record = pd.Series(index=df.columns, dtype="object")
-                    record["Day"] = t
-                    record["Susceptable"] = s
-                    record["Infected"] = i
-                    record["Recovered"] = r
-                    record["Patients"] = p
-                    df = df.append(record, ignore_index=True)
-                df.to_csv(
-                    "outputs/logs/episode-{}.csv".format(episode), index=False
-                )
-                logger.info("episode-{}.csv を出力しました".format(episode))
+            path = "outputs/logs/episode-{}.csv".format(episode)
+            self.recorder.output_logs(episode, path)
+            logger.info("episode-{}.csv を出力しました".format(episode))
 
     def output_environment_section_map(self):
         """ Environment の区画マップを出力 """
         logger.info("区画マップ出力を開始します")
-        for episode, sections in tqdm(enumerate(self.section_maps)):
-            plt.clf()
-            plt.figure()
-            ax = plt.axes()
-
-            margin = math.ceil(self.env_size * 0.05)
-            plt.xlim(-margin, self.env_size + margin)
-            plt.ylim(-margin, self.env_size + margin)
-
-            for section in sections:
-                fill_color = "#FFFCCC"
-                if section["attribute"] == "private":
-                    fill_color = "#CCFFFC"
-
-                rect = patches.Rectangle(
-                    xy=(section["x_min"], section["y_min"]),
-                    width=section["x_max"] - section["x_min"],
-                    height=section["y_max"] - section["y_min"],
-                    ec="white",
-                    fc=fill_color,
-                )
-                ax.add_patch(rect)
-
-            plt.axis("scaled")
-            ax.set_aspect("equal")
-            plt.savefig(
-                "outputs/images/section-map-episode-{}.png".format(episode)
-            )
-
+        section_maps = self.recorder.get_section_maps()
+        for episode, section_map in tqdm(enumerate(section_maps)):
+            path = "outputs/images/section-map-episode-{}.png".format(episode)
+            Visualizer.output_section_map(section_map, self.env_size, path)
         logger.info("区画マップを出力しました")
 
     def output_sir_charts(self):
         """ SIRチャートを出力 """
         logger.info("ラインチャート出力を開始します")
         for episode in range(self.episode_num):
-            plt.clf()
-
-            s_values = self.s_values_in_all_episode[episode]
-            i_values = self.i_values_in_all_episode[episode]
-            r_values = self.r_values_in_all_episode[episode]
-            df = pd.DataFrame(columns=["Day", "Count", "Status"])
-            with tqdm(
-                zip(self.t_values, s_values, i_values, r_values),
-                total=len(self.t_values),
-            ) as pbar:
-                for t, s, i, r in pbar:
-                    pbar.set_description(
-                        "[LineChartOutput: Episode {}]".format(episode)
-                    )
-
-                    s_record = pd.Series(index=df.columns, dtype="object")
-                    s_record["Day"] = t
-                    s_record["Count"] = s
-                    s_record["Status"] = Status.SUSCEPTABLE.value
-                    df = df.append(s_record, ignore_index=True)
-
-                    i_record = pd.Series(index=df.columns, dtype="object")
-                    i_record["Day"] = t
-                    i_record["Count"] = i
-                    i_record["Status"] = Status.INFECTED.value
-                    df = df.append(i_record, ignore_index=True)
-
-                    r_record = pd.Series(index=df.columns, dtype="object")
-                    r_record["Day"] = t
-                    r_record["Count"] = r
-                    r_record["Status"] = Status.RECOVERED.value
-                    df = df.append(r_record, ignore_index=True)
-
-            df["Day"] = df["Day"].astype(int)
-            df["Count"] = df["Count"].astype(int)
-
-            sns.lineplot(x="Day", y="Count", hue="Status", data=df)
-            plt.savefig("outputs/images/episode-{}.png".format(episode))
+            s, i, r = self.recorder.get_simulation_sir(episode)
+            path = "outputs/images/episode-{}.png".format(episode)
+            Visualizer.output_sir_chart(episode, s, i, r, path)
             logger.info("episode-{}.png を出力しました".format(episode))
 
     def output_aggregated_sir_chart(self, title=None, estimator="mean"):
@@ -336,91 +222,28 @@ class Simulator:
             Noneを指定した場合は、全エピソードの結果を重ねてプロット
         """
         logger.info("集計結果ラインチャートの出力を開始します estimator:{}".format(estimator))
-        plt.clf()
-        df = pd.DataFrame(columns=["Episode", "Day", "Count", "Status"])
-        for episode in tqdm(range(self.episode_num)):
-            s_values = self.s_values_in_all_episode[episode]
-            i_values = self.i_values_in_all_episode[episode]
-            r_values = self.r_values_in_all_episode[episode]
-            for t, s, i, r in zip(self.t_values, s_values, i_values, r_values):
-                s_record = pd.Series(index=df.columns, dtype="object")
-                s_record["Episode"] = episode
-                s_record["Day"] = t
-                s_record["Count"] = s
-                s_record["Status"] = Status.SUSCEPTABLE.value
-                df = df.append(s_record, ignore_index=True)
-
-                i_record = pd.Series(index=df.columns, dtype="object")
-                i_record["Episode"] = episode
-                i_record["Day"] = t
-                i_record["Count"] = i
-                i_record["Status"] = Status.INFECTED.value
-                df = df.append(i_record, ignore_index=True)
-
-                r_record = pd.Series(index=df.columns, dtype="object")
-                r_record["Episode"] = episode
-                r_record["Day"] = t
-                r_record["Count"] = r
-                r_record["Status"] = Status.RECOVERED.value
-                df = df.append(r_record, ignore_index=True)
-
-        df["Episode"] = df["Episode"].astype(str)
-        df["Day"] = df["Day"].astype(int)
-        df["Count"] = df["Count"].astype(int)
-        df["Status"] = df["Status"].astype(str)
-
-        if title is not None:
-            plt.title(title)
-
-        if estimator is None:
-            sns.lineplot(
-                x="Day",
-                y="Count",
-                hue="Status",
-                units="Episode",
-                estimator=estimator,
-                data=df,
-            )
-            output_path = "outputs/images/aggrigated-all.png"
-        else:
-            sns.lineplot(
-                x="Day", y="Count", hue="Status", estimator=estimator, data=df
-            )
-            output_path = "outputs/images/aggrigated-{}.png".format(estimator)
-        plt.savefig(output_path)
+        s, i, r = self.recorder.get_simulation_sir()
+        path = "outputs/images/aggrigated-all.png"
+        if estimator is not None:
+            path = "outputs/images/aggrigated-{}.png".format(estimator)
+        Visualizer.output_aggregated_sir_chart(
+            self.episode_num, s, i, r, path, title, estimator
+        )
         logger.info("集計結果ラインチャートを出力しました")
 
-    def output_hospital_patients_charts(self, capacity):
+    def output_hospital_patients_charts(self):
         """ 病院の患者数遷移ラインチャートを出力 """
         logger.info("病院の患者数遷移グラフの出力を開始します")
         for episode in range(self.episode_num):
-            plt.clf()
-            plt.ylim(0, capacity)
-
-            p_values = self.patients_values_in_all_episode[episode]
-            df = pd.DataFrame(columns=["Day", "Count"])
-            with tqdm(zip(self.t_values, p_values)) as pbar:
-                for t, p in pbar:
-                    pbar.set_description(
-                        "[PatientsChartOutput: Episode {}]".format(episode)
-                    )
-
-                    record = pd.Series(index=df.columns, dtype="object")
-                    record["Day"] = t
-                    record["Count"] = p
-                    df = df.append(record, ignore_index=True)
-
-            df["Day"] = df["Day"].astype(int)
-            df["Count"] = df["Count"].astype(int)
-
-            sns.lineplot(x="Day", y="Count", data=df)
-            plt.savefig(
-                "outputs/images/patients-episode-{}.png".format(episode)
+            p = self.recorder.get_simulation_patients(episode)
+            path = "outputs/images/patients-episode-{}.png".format(episode)
+            Visualizer.output_hospital_patients_chart(
+                episode, self.hospital_capacity, p, path
             )
             logger.info("patients-episode-{}.png を出力しました".format(episode))
 
     def output_hospital_patients_aggregated_chart(
-        self, capacity, title=None, estimator="mean"
+        self, title=None, estimator="mean"
     ):
         """ 病院の患者数集計ラインチャートを出力
 
@@ -433,43 +256,18 @@ class Simulator:
             Noneを指定した場合は、全エピソードの結果を重ねてプロット
         """
         logger.info("病院の患者数集計グラフの出力を開始します")
-        plt.clf()
-        plt.ylim(0, capacity)
-        df = pd.DataFrame(columns=["Episode", "Day", "Count"])
-        for episode in tqdm(range(self.episode_num)):
-            p_values = self.patients_values_in_all_episode[episode]
-            for t, p in zip(self.t_values, p_values):
-                record = pd.Series(index=df.columns, dtype="object")
-                record["Episode"] = episode
-                record["Day"] = t
-                record["Count"] = p
-                df = df.append(record, ignore_index=True)
-
-        df["Episode"] = df["Episode"].astype(str)
-        df["Day"] = df["Day"].astype(int)
-        df["Count"] = df["Count"].astype(int)
-
-        if title is not None:
-            plt.title(title)
-
-        if estimator is None:
-            sns.lineplot(
-                x="Day",
-                y="Count",
-                units="Episode",
-                estimator=estimator,
-                data=df,
-            )
-            output_path = "outputs/images/patients-aggrigated-all.png"
-        else:
-            sns.lineplot(x="Day", y="Count", estimator=estimator, data=df)
-            output_path = "outputs/images/patients-aggrigated-{}.png".format(
+        p = self.recorder.get_simulation_patients()
+        path = "outputs/images/patients-aggrigated-all.png"
+        if estimator is not None:
+            path = "outputs/images/patients-aggrigated-{}.png".format(
                 estimator
             )
-        plt.savefig(output_path)
+        Visualizer.output_hospital_patients_aggregated_chart(
+            self.episode_num, self.hospital_capacity, p, path, title, estimator
+        )
         logger.info("病院の患者数集計グラフを出力しました")
 
-    def output_animation(self, interval=100):
+    def output_animation(self, interval=200):
         """ シミュレーション結果の動画を出力
 
         Parameters
@@ -479,74 +277,10 @@ class Simulator:
         """
         logger.info("アニメーションの出力を開始します")
         for episode in range(self.episode_num):
-            plt.clf()
-            fig = plt.figure()
-            ax = plt.axes()
-
-            margin = math.ceil(self.env_size * 0.05)
-            plt.xlim(-margin, self.env_size + margin)
-            plt.ylim(-margin, self.env_size + margin)
-
-            artists = []
-            snap_shots_in_days = self.snap_shots_in_all_episode[episode]
-            sections = self.section_maps[episode]
-
-            for section in sections:
-                color = "#FFFCCC"
-                if section["attribute"] == "private":
-                    color = "#CCFFFC"
-
-                rect = patches.Rectangle(
-                    xy=(section["x_min"], section["y_min"]),
-                    alpha=0.3,
-                    width=section["x_max"] - section["x_min"],
-                    height=section["y_max"] - section["y_min"],
-                    ec="lightgrey",
-                    fc=color
-                )
-                ax.add_patch(rect)
-
-            plt.axis("scaled")
-            ax.set_aspect("equal")
-
-            with tqdm(snap_shots_in_days) as pbar:
-                for d_idx, snap_shots_in_hours in enumerate(pbar):
-                    pbar.set_description(
-                        "[AnimationOutput: Episode {}]".format(episode)
-                    )
-
-                    for h_idx, df in enumerate(snap_shots_in_hours):
-                        df.loc[
-                            df["status"] == Status.SUSCEPTABLE, "color"
-                        ] = "lightskyblue"
-                        df.loc[
-                            (df["status"] == Status.INFECTED)
-                            & ~(df["is_patient"]),
-                            "color",
-                        ] = "red"
-                        df.loc[
-                            (df["status"] == Status.INFECTED)
-                            & (df["is_patient"]),
-                            "color",
-                        ] = "darkgrey"
-                        df.loc[
-                            df["status"] == Status.RECOVERED, "color"
-                        ] = "lightgreen"
-
-                        artist = ax.scatter(
-                            df["x"], df["y"], s=10, c=df["color"]
-                        )
-                        title = ax.text(
-                            -margin,
-                            -margin,
-                            "Day:{} Hour:{}".format(d_idx + 1, h_idx + 7),
-                            fontsize="small",
-                        )
-                        artists.append([artist, title])
-
-            anim = animation.ArtistAnimation(fig, artists, interval=interval)
-            anim.save(
-                "outputs/animations/episode-{}.mp4".format(episode),
-                writer="ffmpeg",
+            snap_shots = self.recorder.get_simulation_snap_shots(episode)
+            section_map = self.recorder.get_section_maps(episode)
+            path = "outputs/animations/episode-{}.mp4".format(episode)
+            Visualizer.output_animation(
+                episode, snap_shots, section_map, self.env_size, path, interval
             )
             logger.info("episode-{}.mp4 を出力しました".format(episode))
