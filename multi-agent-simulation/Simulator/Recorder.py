@@ -10,11 +10,13 @@ class Recorder:
         # タイムスタンプ
         self.t_values = list(range(days + 1))
 
-        # SIRのカウント記録
+        # SEIRのカウント記録
         self.s_values = []
+        self.e_values = []
         self.i_values = []
         self.r_values = []
         self.s_values_in_all_episode = []
+        self.e_values_in_all_episode = []
         self.i_values_in_all_episode = []
         self.r_values_in_all_episode = []
 
@@ -32,6 +34,7 @@ class Recorder:
     def clear_simulation_records(self):
         """ シミュレーション記録の削除 """
         self.s_values_in_all_episode = []
+        self.e_values_in_all_episode = []
         self.i_values_in_all_episode = []
         self.r_values_in_all_episode = []
         self.patients_values_in_all_episode = []
@@ -41,6 +44,7 @@ class Recorder:
     def clear_episode_record(self):
         """ エピソード記録の削除 """
         self.s_values = []
+        self.e_values = []
         self.i_values = []
         self.r_values = []
         self.patients_values = []
@@ -49,14 +53,16 @@ class Recorder:
     def update_simulation_records(self):
         """ シミュレーション記録を更新します """
         self.s_values_in_all_episode.append(self.s_values)
+        self.e_values_in_all_episode.append(self.e_values)
         self.i_values_in_all_episode.append(self.i_values)
         self.r_values_in_all_episode.append(self.r_values)
         self.patients_values_in_all_episode.append(self.patients_values)
         self.snap_shots_in_all_episode.append(self.snap_shots)
 
-    def append_sirp(self, s_value, i_value, r_value, p_value):
-        """ SIRの数値と病院患者数を記録 """
+    def append_seirp(self, s_value, e_value, i_value, r_value, p_value):
+        """ SEIRの数値と病院患者数を記録 """
         self.s_values.append(s_value)
+        self.e_values.append(e_value)
         self.i_values.append(i_value)
         self.r_values.append(r_value)
         self.patients_values.append(p_value)
@@ -69,16 +75,18 @@ class Recorder:
         """ セクションマップを記録 """
         self.section_maps.append(section_map)
 
-    def get_simulation_sir(self, episode=None):
-        """ シミュレーション記録からSIRカウントを取得します """
+    def get_simulation_seir(self, episode=None):
+        """ シミュレーション記録からSEIRカウントを取得します """
         s = self.s_values_in_all_episode
+        e = self.e_values_in_all_episode
         i = self.i_values_in_all_episode
         r = self.r_values_in_all_episode
         if episode is not None:
             s = s[episode]
+            e = e[episode]
             i = i[episode]
             r = r[episode]
-        return s, i, r
+        return s, e, i, r
 
     def get_simulation_patients(self, episode=None):
         """ シミュレーション記録から病床数を取得します """
@@ -91,7 +99,7 @@ class Recorder:
         if episode is not None:
             return self.snap_shots_in_all_episode[episode]
         return self.snap_shots_in_all_episode
-    
+
     def get_section_maps(self, episode=None):
         """ シミュレーション記録から区画情報を取得します """
         if episode is not None:
@@ -100,27 +108,29 @@ class Recorder:
 
     def output_logs(self, episode, path):
         """ シミュレーションログを出力 """
-        s_val, i_val, r_val = self.get_simulation_sir(episode)
+        s_val, e_val, i_val, r_val = self.get_simulation_seir(episode)
         p_val = self.get_simulation_patients(episode)
 
         df = pd.DataFrame(
             columns=[
                 "Day",
                 "Susceptable",
+                "Exposed",
                 "Infected",
                 "Recovered",
                 "Patients",
             ]
         )
         with tqdm(
-            zip(self.t_values, s_val, i_val, r_val, p_val),
+            zip(self.t_values, s_val, e_val, i_val, r_val, p_val),
             total=len(self.t_values),
         ) as pbar:
-            for t, s, i, r, p in pbar:
+            for t, s, e, i, r, p in pbar:
                 pbar.set_description("[LogOutput: Episode {}]".format(episode))
                 record = pd.Series(index=df.columns, dtype="object")
                 record["Day"] = t
                 record["Susceptable"] = s
+                record["Exposed"] = e
                 record["Infected"] = i
                 record["Recovered"] = r
                 record["Patients"] = p

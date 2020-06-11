@@ -60,13 +60,13 @@ class Agent:
             self._stay_here()
             return
 
-        if self.status == Status.INFECTED and self.has_subjective_symptoms:
-            # 自覚症状ありの感染者の場合、自宅に留まる
-            self._stay_home()
-            return
-
         if self.is_in_hospital:
             # Hospitalに収容されている場合、自宅に留まる
+            self._stay_hospital()
+            return
+
+        if self.status == Status.INFECTED and self.has_subjective_symptoms:
+            # 自覚症状ありの感染者の場合、自宅に留まる
             self._stay_home()
             return
 
@@ -86,6 +86,19 @@ class Agent:
         """ [行動定義関数] ステイホーム """
         home = self.home_section
         self.next_x, self.next_y = self._get_position_in_section(home)
+        self.next_section = self.home_section
+
+    def _stay_hospital(self):
+        """ [行動定義関数] 病院に留まる """
+        # 病院に収容された人は、自宅の中央座標に留まり続ける
+        self.next_x = (
+            self.home_section.x_min
+            + (self.home_section.x_max - self.home_section.x_min) / 2
+        )
+        self.next_y = (
+            self.home_section.y_min
+            + (self.home_section.y_max - self.home_section.y_min) / 2
+        )
         self.next_section = self.home_section
 
     def _stay_here(self):

@@ -45,16 +45,24 @@ class Visualizer:
         plt.savefig(path)
 
     @classmethod
-    def output_sir_chart(cls, episode, s_values, i_values, r_values, path):
-        """ SIRチャートを出力 """
+    def output_seir_chart(
+        cls, episode, s_values, e_values, i_values, r_values, path
+    ):
+        """ SEIRチャートを出力 """
         plt.clf()
 
         df = pd.DataFrame(columns=["Day", "Count", "Status"])
         with tqdm(
-            zip(list(range(len(s_values))), s_values, i_values, r_values),
+            zip(
+                list(range(len(s_values))),
+                s_values,
+                e_values,
+                i_values,
+                r_values,
+            ),
             total=len(s_values),
         ) as pbar:
-            for t, s, i, r in pbar:
+            for t, s, e, i, r in pbar:
                 pbar.set_description(
                     "[LineChartOutput: Episode {}]".format(episode)
                 )
@@ -64,6 +72,12 @@ class Visualizer:
                 s_record["Count"] = s
                 s_record["Status"] = Status.SUSCEPTABLE.value
                 df = df.append(s_record, ignore_index=True)
+
+                e_record = pd.Series(index=df.columns, dtype="object")
+                e_record["Day"] = t
+                e_record["Count"] = e
+                e_record["Status"] = Status.EXPOSED.value
+                df = df.append(e_record, ignore_index=True)
 
                 i_record = pd.Series(index=df.columns, dtype="object")
                 i_record["Day"] = t
@@ -84,32 +98,41 @@ class Visualizer:
         plt.savefig(path)
 
     @classmethod
-    def output_aggregated_sir_chart(
+    def output_aggregated_seir_chart(
         cls,
         episode_num,
         s_values,
+        e_values,
         i_values,
         r_values,
         path,
         title=None,
         estimator="mean",
     ):
-        """ 集計SIRチャートを出力 """
+        """ 集計SEIRチャートを出力 """
         plt.clf()
 
         df = pd.DataFrame(columns=["Episode", "Day", "Count", "Status"])
         for episode in tqdm(range(episode_num)):
             s_val = s_values[episode]
+            e_val = e_values[episode]
             i_val = i_values[episode]
             r_val = r_values[episode]
             t_val = list(range(len(s_val)))
-            for t, s, i, r in zip(t_val, s_val, i_val, r_val):
+            for t, s, e, i, r in zip(t_val, s_val, e_val, i_val, r_val):
                 s_record = pd.Series(index=df.columns, dtype="object")
                 s_record["Episode"] = episode
                 s_record["Day"] = t
                 s_record["Count"] = s
                 s_record["Status"] = Status.SUSCEPTABLE.value
                 df = df.append(s_record, ignore_index=True)
+
+                e_record = pd.Series(index=df.columns, dtype="object")
+                e_record["Episode"] = episode
+                e_record["Day"] = t
+                e_record["Count"] = e
+                e_record["Status"] = Status.EXPOSED.value
+                df = df.append(e_record, ignore_index=True)
 
                 i_record = pd.Series(index=df.columns, dtype="object")
                 i_record["Episode"] = episode
@@ -261,6 +284,7 @@ class Visualizer:
                     df.loc[
                         df["status"] == Status.SUSCEPTABLE, "color"
                     ] = "lightskyblue"
+                    df.loc[df["status"] == Status.EXPOSED, "color"] = "orange"
                     df.loc[
                         (df["status"] == Status.INFECTED)
                         & ~(df["is_patient"]),
