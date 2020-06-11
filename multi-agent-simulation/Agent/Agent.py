@@ -26,18 +26,11 @@ class Agent:
         # エージェントの家族 (同じhomeを持つAgent)
         self.family = []
 
-        # エージェントの感染確率( S => I の確率)
-        self.infection_prob = infection_model.infection_prob
-        # エージェントの回復確率( I => R の確率)
-        self.recovery_prob = infection_model.recovery_prob
-        # エージェントの抗体獲得確率( I => R 後に R => S が起きる確率)
-        self.antibody_acquisition_prob = (
-            infection_model.antibody_acquisition_prob
-        )
-        # 自覚症状が生じる確率
-        self.subjective_symptoms_prob = (
-            infection_model.subjective_symptoms_prob
-        )
+        # 感染症モデル
+        self.infection_model = infection_model
+
+        # 潜伏期間
+        self.incubation_period = 0
 
         # エージェントの状態
         self.status = status
@@ -53,6 +46,11 @@ class Agent:
 
         # 自身の周囲に存在するエージェント
         self.neighbor_agents = []
+
+    @property
+    def has_infection_power(self):
+        """ 他人に対する感染力を持っているか """
+        return self.status in [Status.INFECTED, Status.EXPOSED]
 
     def decide_action(
         self, x_min, x_max, y_min, y_max, public_sections, pattern, hour
@@ -124,9 +122,12 @@ class Agent:
             self.next_status = Status.RECOVERED
 
         elif self.status == Status.INFECTED:
-            # 感染者は一定確率で回復する想定
-            if random.random() <= self.recovery_prob:
-                if random.random() <= self.antibody_acquisition_prob:
+            # 感染者(発症) は一定確率で回復する想定
+            if random.random() <= self.infection_model.recovery_prob:
+                if (
+                    random.random()
+                    <= self.infection_model.antibody_acquisition_prob
+                ):
                     # 抗体獲得に成功した場合
                     self.next_status = Status.RECOVERED
                 else:
@@ -135,22 +136,42 @@ class Agent:
             else:
                 self.next_status = Status.INFECTED
 
+        elif self.status == Status.EXPOSED:
+            # 感染者(潜伏) は潜伏期間経過後に INFECTED に移行
+            self.incubation_period -= 1
+            if self.incubation_period == 0:
+                self.next_status = Status.INFECTED
+            else:
+                self.next_status = Status.EXPOSED
+
         elif self.status == Status.SUSCEPTABLE:
-            # 1日に接触した感染者に比例する確率で感染状態に移行
+            # 1日に接触した感染者に比例する確率で感染状態(潜伏)に移行
             # (Hospitalに収容されている感染者は除外)
             infected_agents = [
                 agent
                 for agent in self.neighbor_agents
-                if agent.status == Status.INFECTED and not agent.is_in_hospital
+                if agent.has_infection_power and not agent.is_in_hospital
             ]
 
             # len(infected_agents)人の感染者と接触したとき、一度でも感染する確率
             infection_prob = 1 - (
-                (1 - self.infection_prob) ** len(infected_agents)
+                (1 - self.infection_model.infection_prob)
+                ** len(infected_agents)
             )
 
             if random.random() <= infection_prob:
-                self.next_status = Status.INFECTED
+                self.next_status = Status.EXPOSED
+                ip_range_min = (
+                    self.infection_model.incubation_period
+                    - self.infection_model.incubation_period_range
+                )
+                ip_range_max = (
+                    self.infection_model.incubation_period
+                    + self.infection_model.incubation_period_range
+                )
+                self.incubation_period = random.randint(
+                    ip_range_min, ip_range_max
+                )
             else:
                 self.next_status = Status.SUSCEPTABLE
 
@@ -164,7 +185,10 @@ class Agent:
             and self.next_status == Status.INFECTED
         ):
             # 感染状態に移行するとき、一定確率で自覚症状を付与
-            if random.random() <= self.subjective_symptoms_prob:
+            if (
+                random.random()
+                <= self.infection_model.subjective_symptoms_prob
+            ):
                 self.has_subjective_symptoms = True
             else:
                 self.has_subjective_symptoms = False

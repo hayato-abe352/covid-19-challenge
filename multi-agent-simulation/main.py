@@ -33,6 +33,10 @@ INFECTION_PARAMS = {
     "antibody_acquisition_prob": 1.0,
     # 自覚症状の発生確率
     "subjective_symptoms_prob": 0.5,
+    # 潜伏期間の中央値
+    "incubation_period": 5,
+    # 潜伏期間のブレ幅
+    "incubation_period_range": 3,
     # 濃厚接触半径
     "influence_range": 2,
 }
