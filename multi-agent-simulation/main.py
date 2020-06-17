@@ -6,9 +6,9 @@ from Simulator import Infection, Simulator
 # シミュレーションパラメータ
 SIMULATION_PARAMS = {
     # シミュレーション日数
-    "simulation_days": 30,
+    "simulation_days": 90,
     # シミュレーションの繰り返し数
-    "episode_num": 3,
+    "episode_num": 10,
     # 環境サイズ
     "env_size": 10,
     # 総人口
@@ -33,6 +33,10 @@ INFECTION_PARAMS = {
     "antibody_acquisition_prob": 1.0,
     # 自覚症状の発生確率
     "subjective_symptoms_prob": 0.5,
+    # 潜伏期間の中央値
+    "incubation_period": 5,
+    # 潜伏期間のブレ幅
+    "incubation_period_range": 3,
     # 濃厚接触半径
     "influence_range": 2,
 }
@@ -52,7 +56,7 @@ def main():
     simulator.output_logs()
 
     # ラインチャート出力
-    simulator.output_sir_charts()
+    simulator.output_seir_charts()
 
     # 集計結果出力
     episode_num = SIMULATION_PARAMS["episode_num"]
@@ -61,8 +65,8 @@ def main():
     title = "TotalEpisode:{} HC:{} OP:{}days".format(
         episode_num, h_capacity, observation_period
     )
-    simulator.output_aggregated_sir_chart(title=title)
-    simulator.output_aggregated_sir_chart(
+    simulator.output_aggregated_seir_chart(title=title)
+    simulator.output_aggregated_seir_chart(
         title=title, estimator=None,
     )
 

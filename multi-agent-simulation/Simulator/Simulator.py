@@ -126,6 +126,7 @@ class Simulator:
 
             # 初期状態を記録
             susceptable_num = env.count_susceptable()
+            exposed_num = env.count_exposed()
             infected_num = env.count_infected()
             recovered_num = env.count_recovered()
             patients_num = env.count_hospital_parients()
@@ -136,8 +137,12 @@ class Simulator:
             )
 
             self.recorder.clear_episode_record()
-            self.recorder.append_sirp(
-                susceptable_num, infected_num, recovered_num, patients_num
+            self.recorder.append_seirp(
+                susceptable_num,
+                exposed_num,
+                infected_num,
+                recovered_num,
+                patients_num,
             )
 
             with tqdm(range(self.simulation_days)) as pbar:
@@ -145,12 +150,14 @@ class Simulator:
                     snap_shots = self.one_epoch(env, day + 1)
 
                     susceptable_num = env.count_susceptable()
+                    exposed_num = env.count_exposed()
                     infected_num = env.count_infected()
                     recovered_num = env.count_recovered()
                     patients_num = env.count_hospital_parients()
 
-                    self.recorder.append_sirp(
+                    self.recorder.append_seirp(
                         susceptable_num,
+                        exposed_num,
                         infected_num,
                         recovered_num,
                         patients_num,
@@ -162,6 +169,7 @@ class Simulator:
                         OrderedDict(
                             day=day + 1,
                             s=susceptable_num,
+                            e=exposed_num,
                             i=infected_num,
                             r=recovered_num,
                             p=patients_num,
@@ -203,18 +211,18 @@ class Simulator:
             output_section_map(section_map, self.env_size, path)
         logger.info("区画マップを出力しました")
 
-    def output_sir_charts(self):
-        """ SIRチャートを出力 """
+    def output_seir_charts(self):
+        """ SEIRチャートを出力 """
         logger.info("ラインチャート出力を開始します")
-        output_sir_chart = Visualizer.output_sir_chart
+        output_seir_chart = Visualizer.output_seir_chart
         for episode in range(self.episode_num):
-            s, i, r = self.recorder.get_simulation_sir(episode)
+            s, e, i, r = self.recorder.get_simulation_seir(episode)
             path = "outputs/images/episode-{}.png".format(episode)
-            output_sir_chart(episode, s, i, r, path)
+            output_seir_chart(episode, s, e, i, r, path)
             logger.info("episode-{}.png を出力しました".format(episode))
 
-    def output_aggregated_sir_chart(self, title=None, estimator="mean"):
-        """ 集計結果のSIRチャートを出力
+    def output_aggregated_seir_chart(self, title=None, estimator="mean"):
+        """ 集計結果のSEIRチャートを出力
         
         Parameters
         ----------
@@ -225,12 +233,12 @@ class Simulator:
             Noneを指定した場合は、全エピソードの結果を重ねてプロット
         """
         logger.info("集計結果ラインチャートの出力を開始します estimator:{}".format(estimator))
-        s, i, r = self.recorder.get_simulation_sir()
+        s, e, i, r = self.recorder.get_simulation_seir()
         path = "outputs/images/aggrigated-all.png"
         if estimator is not None:
             path = "outputs/images/aggrigated-{}.png".format(estimator)
-        Visualizer.output_aggregated_sir_chart(
-            self.episode_num, s, i, r, path, title, estimator
+        Visualizer.output_aggregated_seir_chart(
+            self.episode_num, s, e, i, r, path, title, estimator
         )
         logger.info("集計結果ラインチャートを出力しました")
 

@@ -64,7 +64,7 @@ class Environment:
                     x_max=x_max,
                     y_min=y_min,
                     y_max=y_max,
-                    attribute=attribute
+                    attribute=attribute,
                 )
                 sections.append(section)
         self.sections = sections
@@ -149,8 +149,15 @@ class Environment:
         ]
         return len(susceptables)
 
+    def count_exposed(self):
+        """ 感染者(潜伏)数をカウント """
+        exposed = [
+            agent for agent in self.agents if agent.status == Status.EXPOSED
+        ]
+        return len(exposed)
+
     def count_infected(self):
-        """ 感染者数をカウント """
+        """ 感染者(発症)数をカウント """
         infecteds = [
             agent for agent in self.agents if agent.status == Status.INFECTED
         ]
