@@ -19,8 +19,6 @@ SIMULATION_PARAMS = {
     "hospital_capacity": 5,
     # 病院収容までの観察期間
     "observation_period": 5,
-    # エージェントの動きパターン (moving/freeze)
-    "agent_moving": "moving",
 }
 
 # 感染症パラメータ

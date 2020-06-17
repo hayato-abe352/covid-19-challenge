@@ -53,13 +53,9 @@ class Agent:
         return self.status in [Status.INFECTED, Status.EXPOSED]
 
     def decide_action(
-        self, x_min, x_max, y_min, y_max, public_sections, pattern, hour
+        self, x_min, x_max, y_min, y_max, public_sections, hour
     ):
         """ エージェントのアクションを決定 """
-        if pattern == "freeze":
-            self._stay_here()
-            return
-
         if self.is_in_hospital:
             # Hospitalに収容されている場合、自宅に留まる
             self._stay_hospital()

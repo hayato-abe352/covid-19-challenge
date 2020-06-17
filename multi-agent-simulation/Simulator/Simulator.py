@@ -49,9 +49,6 @@ class Simulator:
         # 観察期間
         self.observation_period = observation_period
 
-        # エージェントの移動パターン
-        self.agent_moving = agent_moving
-
         # データ記録
         self.recorder = Recorder(simulation_days)
 
@@ -76,7 +73,6 @@ class Simulator:
                     0,
                     self.env_size,
                     public_sections,
-                    self.agent_moving,
                     hour,
                 )
             # エージェントの位置を更新
