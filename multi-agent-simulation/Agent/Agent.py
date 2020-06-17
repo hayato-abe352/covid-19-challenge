@@ -192,12 +192,12 @@ class Agent:
 
     def update_status(self):
         """ エージェントの状態を更新 """
-        # 感染時の自覚症状発生判定
+        # 発症時の自覚症状発生判定
         if (
-            self.status == Status.SUSCEPTABLE
+            self.status == Status.EXPOSED
             and self.next_status == Status.INFECTED
         ):
-            # 感染状態に移行するとき、一定確率で自覚症状を付与
+            # 発症状態に移行するとき、一定確率で自覚症状を付与
             if (
                 random.random()
                 <= self.infection_model.subjective_symptoms_prob
