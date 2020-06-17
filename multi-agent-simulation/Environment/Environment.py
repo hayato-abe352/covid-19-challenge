@@ -8,6 +8,7 @@ import pandas as pd
 from Agent import Agent, Status
 from Environment.Hospital import Hospital
 from Environment.Section import Section, SeverityLevel
+from Environment.Government import Government
 
 
 class Environment:
@@ -42,6 +43,8 @@ class Environment:
         # エージェントの活動時間
         self.active_time = list(range(7, 21))
 
+        # 政府クラス
+        self.government = Government(agent_num)
         # 非常事態宣言を発令しているかどうか
         self.is_emergency = False
 
@@ -197,10 +200,37 @@ class Environment:
             df = df.append(record, ignore_index=True)
         return df
 
-    def decide_policy(self):
-        """ 政策を決定 """
-        pass
+    def update_goverment(self):
+        """ 現在の環境の状態に合わせて政府の情報を更新 """
+        self.government.add_history(self.count_infected())
 
     def apply_policy(self):
         """ 政策を適用 """
-        pass
+        if self.is_emergency:
+            # 非常事態宣言発令中
+            cancel = self.government.decide_cancel_emergency()
+            if cancel:
+                # 非常事態宣言解除
+                self._cancel_emergency()
+        else:
+            # 非常事態宣言解除中
+            issue = self.government.decide_issue_emergency()
+            if issue:
+                # 非常事態宣言発令
+                self._issue_emergency()
+
+    def _issue_emergency(self):
+        """ 非常事態宣言発令処理 """
+        self.is_emergency = True
+        for section in self.sections:
+            if (
+                section.attribute == "public"
+                and section.severity == SeverityLevel.LOW
+            ):
+                section.is_open = False
+
+    def _cancel_emergency(self):
+        """ 非常事態宣言解除処理 """
+        self.is_emergency = False
+        for section in self.sections:
+            section.is_open = True
