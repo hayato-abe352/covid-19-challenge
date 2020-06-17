@@ -176,6 +176,16 @@ class Environment:
         ]
         return len(infecteds)
 
+    def count_infected_with_symptoms(self):
+        """ 自覚症状ありの感染者(発症)数をカウント """
+        infecteds = [
+            agent
+            for agent in self.agents
+            if agent.status == Status.INFECTED
+            and agent.has_subjective_symptoms
+        ]
+        return len(infecteds)
+
     def count_recovered(self):
         """ 回復者数をカウント """
         recovereds = [
@@ -202,7 +212,7 @@ class Environment:
 
     def update_goverment(self):
         """ 現在の環境の状態に合わせて政府の情報を更新 """
-        self.government.add_history(self.count_infected())
+        self.government.add_history(self.count_infected_with_symptoms())
 
     def apply_policy(self):
         """ 政策を適用 """
