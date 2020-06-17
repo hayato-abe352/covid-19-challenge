@@ -7,7 +7,7 @@ import pandas as pd
 
 from Agent import Agent, Status
 from Environment.Hospital import Hospital
-from Environment.Section import Section
+from Environment.Section import Section, SeverityLevel
 
 
 class Environment:
@@ -42,6 +42,9 @@ class Environment:
         # エージェントの活動時間
         self.active_time = list(range(7, 21))
 
+        # 非常事態宣言を発令しているかどうか
+        self.is_emergency = False
+
     def init_sections(self):
         """ 環境を初期化 (区画分割と属性付与) """
         section_size = self.env_size / self.section_div_num
@@ -66,6 +69,13 @@ class Environment:
                     y_max=y_max,
                     attribute=attribute,
                 )
+
+                if attribute == "public":
+                    severity = random_choices(
+                        [SeverityLevel.HIGH, SeverityLevel.LOW], weights=[1, 3]
+                    )
+                    section.severity = severity
+
                 sections.append(section)
         self.sections = sections
 
@@ -186,3 +196,11 @@ class Environment:
             record["is_patient"] = agent.is_in_hospital
             df = df.append(record, ignore_index=True)
         return df
+
+    def decide_policy(self):
+        """ 政策を決定 """
+        pass
+
+    def apply_policy(self):
+        """ 政策を適用 """
+        pass
