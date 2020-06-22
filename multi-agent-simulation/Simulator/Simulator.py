@@ -303,8 +303,16 @@ class Simulator:
         for episode in range(self.episode_num):
             snap_shots = self.recorder.get_simulation_snap_shots(episode)
             section_map = self.recorder.get_section_maps(episode)
+            se, ee = self.recorder.get_emergency_date(episode)
             path = "outputs/animations/episode-{}.mp4".format(episode)
             output_animation(
-                episode, snap_shots, section_map, self.env_size, path, interval
+                episode,
+                snap_shots,
+                section_map,
+                self.env_size,
+                se,
+                ee,
+                path,
+                interval,
             )
             logger.info("episode-{}.mp4 を出力しました".format(episode))

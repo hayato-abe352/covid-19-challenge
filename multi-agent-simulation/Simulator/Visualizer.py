@@ -264,9 +264,29 @@ class Visualizer:
 
     @classmethod
     def output_animation(
-        cls, episode, snap_shots, section_map, env_size, path, interval=200
+        cls,
+        episode,
+        snap_shots,
+        section_map,
+        env_size,
+        se,
+        ee,
+        path,
+        interval=200,
     ):
         """ シミュレーション結果のアニメーション出力 """
+        # 非常事態宣言の日付リストを復元
+        emergency_date = []
+        emergency = False
+        for t, _ in enumerate(snap_shots):
+            if emergency:
+                if t + 1 in ee:
+                    emergency = False
+            else:
+                if t + 1 in se:
+                    emergency = True
+            emergency_date.append(emergency)
+
         plt.clf()
         fig = plt.figure()
         ax = plt.axes()
@@ -302,6 +322,7 @@ class Visualizer:
                 pbar.set_description(
                     "[AnimationOutput: Episode {}]".format(episode)
                 )
+                is_emergency_day = emergency_date[d_idx]
 
                 for h_idx, df in enumerate(snap_shots_in_hours):
                     df.loc[
@@ -323,9 +344,13 @@ class Visualizer:
 
                     artist = scatter(df["x"], df["y"], s=10, c=df["color"])
                     title = text(
-                        -margin,
-                        -margin,
-                        "Day:{} Hour:{}".format(d_idx + 1, h_idx + 7),
+                        0,
+                        0,
+                        "Day:{} Hour:{} {}".format(
+                            d_idx + 1,
+                            h_idx + 7,
+                            "<<EMERGENCY>>" if is_emergency_day else "",
+                        ),
                         fontsize="small",
                     )
                     artists.append([artist, title])
