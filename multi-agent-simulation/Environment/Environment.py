@@ -76,7 +76,7 @@ class Environment:
                 if attribute == "public":
                     severity = random_choices(
                         [SeverityLevel.HIGH, SeverityLevel.LOW], weights=[1, 3]
-                    )
+                    )[0]
                     section.severity = severity
 
                 sections.append(section)

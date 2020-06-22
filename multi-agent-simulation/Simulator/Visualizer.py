@@ -2,6 +2,7 @@
 可視化 (グラフ出力) 関連の関数定義
 """
 import math
+import itertools
 
 import matplotlib.animation as animation
 import matplotlib.patches as patches
@@ -46,7 +47,15 @@ class Visualizer:
 
     @classmethod
     def output_seir_chart(
-        cls, episode, s_values, e_values, i_values, r_values, path
+        cls,
+        episode,
+        s_values,
+        e_values,
+        i_values,
+        r_values,
+        start_emergency,
+        end_emergency,
+        path,
     ):
         """ SEIRチャートを出力 """
         plt.clf()
@@ -95,6 +104,12 @@ class Visualizer:
         df["Count"] = df["Count"].astype(int)
 
         sns.lineplot(x="Day", y="Count", hue="Status", data=df)
+
+        # 非常事態宣言の発令・解除日をプロット
+        for date in start_emergency:
+            plt.axvline(x=date, ymin=0, ymax=max(s_values), c="red", lw=0.5)
+        for date in end_emergency:
+            plt.axvline(x=date, ymin=0, ymax=max(s_values), c="blue", lw=0.5)
         plt.savefig(path)
 
     @classmethod
@@ -105,6 +120,8 @@ class Visualizer:
         e_values,
         i_values,
         r_values,
+        start_emergency,
+        end_emergency,
         path,
         title=None,
         estimator="mean",
@@ -170,6 +187,12 @@ class Visualizer:
                 x="Day", y="Count", hue="Status", estimator=estimator, data=df
             )
 
+        # 非常事態宣言の発令・解除日をプロット
+        ymax = max(list(itertools.chain.from_iterable(s_values)))
+        for date in list(itertools.chain.from_iterable(start_emergency)):
+            plt.axvline(x=date, ymin=0, ymax=ymax, c="red", lw=0.5, alpha=0.5)
+        for date in list(itertools.chain.from_iterable(end_emergency)):
+            plt.axvline(x=date, ymin=0, ymax=ymax, c="blue", lw=0.5, alpha=0.5)
         plt.savefig(path)
 
     @classmethod

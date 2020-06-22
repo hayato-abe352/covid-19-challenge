@@ -28,7 +28,6 @@ class Simulator:
         init_infected_num,
         hospital_capacity,
         observation_period,
-        agent_moving,
     ):
         # シミュレートする感染症モデル
         self.infection_model = infection_model
@@ -68,12 +67,7 @@ class Simulator:
                 # 同じ区画に属している Agent を記録
                 agent.neighbor_agents.extend(env.get_neighbor_agents(agent))
                 agent.decide_action(
-                    0,
-                    self.env_size,
-                    0,
-                    self.env_size,
-                    public_sections,
-                    hour,
+                    0, self.env_size, 0, self.env_size, public_sections, hour
                 )
             # エージェントの位置を更新
             for agent in env.agents:
@@ -95,6 +89,10 @@ class Simulator:
         #     (空いた病床に新たな患者が入るのは早くても翌日になる)
         env.accommodate_to_hospital()
         env.leave_from_hospital()
+
+        # 非常事態宣言の発動判定
+        env.update_goverment()
+        env.apply_policy()
 
         return snap_shots
 
@@ -142,6 +140,7 @@ class Simulator:
             )
 
             with tqdm(range(self.simulation_days)) as pbar:
+                emergency = False
                 for day in pbar:
                     snap_shots = self.one_epoch(env, day + 1)
 
@@ -160,15 +159,27 @@ class Simulator:
                     )
                     self.recorder.append_snap_shot(snap_shots)
 
+                    if env.is_emergency - emergency == 1:
+                        # 非常事態宣言が発令された場合
+                        self.recorder.append_start_emergency(day + 1)
+                    elif env.is_emergency - emergency == -1:
+                        # 非常事態宣言か解除された場合
+                        self.recorder.append_end_emergency(day + 1)
+                    emergency = env.is_emergency
+
                     pbar.set_description("[Run: Episode {}]".format(episode))
                     pbar.set_postfix(
                         OrderedDict(
                             day=day + 1,
                             s=susceptable_num,
                             e=exposed_num,
-                            i=infected_num,
+                            i="{}({})".format(
+                                infected_num,
+                                env.count_infected_with_symptoms(),
+                            ),
                             r=recovered_num,
                             p=patients_num,
+                            EMG="Active" if env.is_emergency else "None",
                         )
                     )
             self.recorder.update_simulation_records()
@@ -213,8 +224,9 @@ class Simulator:
         output_seir_chart = Visualizer.output_seir_chart
         for episode in range(self.episode_num):
             s, e, i, r = self.recorder.get_simulation_seir(episode)
+            se, ee = self.recorder.get_emergency_date(episode)
             path = "outputs/images/episode-{}.png".format(episode)
-            output_seir_chart(episode, s, e, i, r, path)
+            output_seir_chart(episode, s, e, i, r, se, ee, path)
             logger.info("episode-{}.png を出力しました".format(episode))
 
     def output_aggregated_seir_chart(self, title=None, estimator="mean"):
@@ -230,11 +242,12 @@ class Simulator:
         """
         logger.info("集計結果ラインチャートの出力を開始します estimator:{}".format(estimator))
         s, e, i, r = self.recorder.get_simulation_seir()
+        se, ee = self.recorder.get_emergency_date()
         path = "outputs/images/aggrigated-all.png"
         if estimator is not None:
             path = "outputs/images/aggrigated-{}.png".format(estimator)
         Visualizer.output_aggregated_seir_chart(
-            self.episode_num, s, e, i, r, path, title, estimator
+            self.episode_num, s, e, i, r, se, ee, path, title, estimator
         )
         logger.info("集計結果ラインチャートを出力しました")
 

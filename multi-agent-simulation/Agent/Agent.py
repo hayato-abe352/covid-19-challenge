@@ -52,9 +52,7 @@ class Agent:
         """ 他人に対する感染力を持っているか """
         return self.status in [Status.INFECTED, Status.EXPOSED]
 
-    def decide_action(
-        self, x_min, x_max, y_min, y_max, public_sections, hour
-    ):
+    def decide_action(self, x_min, x_max, y_min, y_max, public_sections, hour):
         """ エージェントのアクションを決定 """
         if self.is_in_hospital:
             # Hospitalに収容されている場合、自宅に留まる
@@ -100,8 +98,13 @@ class Agent:
     def _stay_here(self):
         """ [行動定義関数] その区画に留まる """
         current_sec = self.current_section
-        self.next_x, self.next_y = self._get_position_in_section(current_sec)
-        self.next_section = self.current_section
+        if current_sec.is_open:
+            self.next_x, self.next_y = self._get_position_in_section(
+                current_sec
+            )
+            self.next_section = self.current_section
+        else:
+            self._stay_home()
 
     def _move_other_section(self, public_sections):
         """ [行動定義関数] 別の区画に移動する """
@@ -109,8 +112,13 @@ class Agent:
         next_sec = random.choice(
             [sec for sec in public_sections if sec != self.current_section]
         )
-        self.next_x, self.next_y = self._get_position_in_section(next_sec)
-        self.next_section = next_sec
+        if next_sec.is_open:
+            # 選択した区画が移動可能の場合
+            self.next_x, self.next_y = self._get_position_in_section(next_sec)
+            self.next_section = next_sec
+        else:
+            # 選択した区画が移動不可の場合(現在の区画にとどまる)
+            self._stay_here()
 
     def _get_position_in_section(self, section):
         """ [補助関数] セクション内のランダムな位置を取得 """
