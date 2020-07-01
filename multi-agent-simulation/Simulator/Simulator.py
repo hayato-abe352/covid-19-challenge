@@ -28,6 +28,7 @@ class Simulator:
         init_infected_num,
         hospital_capacity,
         observation_period,
+        has_apply_policy,
     ):
         # シミュレートする感染症モデル
         self.infection_model = infection_model
@@ -47,6 +48,9 @@ class Simulator:
         self.hospital_capacity = hospital_capacity
         # 観察期間
         self.observation_period = observation_period
+
+        # 政策を適用するか
+        self.has_apply_policy = has_apply_policy
 
         # データ記録
         self.recorder = Recorder(simulation_days)
@@ -114,6 +118,7 @@ class Simulator:
                 self.infection_model,
                 self.hospital_capacity,
                 self.observation_period,
+                self.has_apply_policy,
             )
             env.init_agents(self.init_infected_num)
             self.recorder.append_section_map(env.get_sections())

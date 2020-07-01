@@ -19,6 +19,7 @@ class Environment:
         infection_model,
         hospital_capacity,
         observation_period,
+        has_apply_policy,
     ):
         # 環境サイズ（env_size x env_size の空間を想定）
         self.env_size = env_size
@@ -43,6 +44,8 @@ class Environment:
         # エージェントの活動時間
         self.active_time = list(range(7, 21))
 
+        # 政策を適用するか
+        self.has_apply_policy = has_apply_policy
         # 政府クラス
         self.government = Government(agent_num)
         # 非常事態宣言を発令しているかどうか
@@ -216,6 +219,9 @@ class Environment:
 
     def apply_policy(self):
         """ 政策を適用 """
+        if not self.has_apply_policy:
+            return
+
         if self.is_emergency:
             # 非常事態宣言発令中
             cancel = self.government.decide_cancel_emergency()
