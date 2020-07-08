@@ -2,6 +2,7 @@
 可視化 (グラフ出力) 関連の関数定義
 """
 import math
+import itertools
 
 import matplotlib.animation as animation
 import matplotlib.patches as patches
@@ -46,7 +47,15 @@ class Visualizer:
 
     @classmethod
     def output_seir_chart(
-        cls, episode, s_values, e_values, i_values, r_values, path
+        cls,
+        episode,
+        s_values,
+        e_values,
+        i_values,
+        r_values,
+        start_emergency,
+        end_emergency,
+        path,
     ):
         """ SEIRチャートを出力 """
         plt.clf()
@@ -95,6 +104,12 @@ class Visualizer:
         df["Count"] = df["Count"].astype(int)
 
         sns.lineplot(x="Day", y="Count", hue="Status", data=df)
+
+        # 非常事態宣言の発令・解除日をプロット
+        for date in start_emergency:
+            plt.axvline(x=date, ymin=0, ymax=max(s_values), c="red", lw=0.5)
+        for date in end_emergency:
+            plt.axvline(x=date, ymin=0, ymax=max(s_values), c="blue", lw=0.5)
         plt.savefig(path)
 
     @classmethod
@@ -105,6 +120,8 @@ class Visualizer:
         e_values,
         i_values,
         r_values,
+        start_emergency,
+        end_emergency,
         path,
         title=None,
         estimator="mean",
@@ -170,6 +187,12 @@ class Visualizer:
                 x="Day", y="Count", hue="Status", estimator=estimator, data=df
             )
 
+        # 非常事態宣言の発令・解除日をプロット
+        ymax = max(list(itertools.chain.from_iterable(s_values)))
+        for date in list(itertools.chain.from_iterable(start_emergency)):
+            plt.axvline(x=date, ymin=0, ymax=ymax, c="red", lw=0.5, alpha=0.5)
+        for date in list(itertools.chain.from_iterable(end_emergency)):
+            plt.axvline(x=date, ymin=0, ymax=ymax, c="blue", lw=0.5, alpha=0.5)
         plt.savefig(path)
 
     @classmethod
@@ -241,9 +264,29 @@ class Visualizer:
 
     @classmethod
     def output_animation(
-        cls, episode, snap_shots, section_map, env_size, path, interval=200
+        cls,
+        episode,
+        snap_shots,
+        section_map,
+        env_size,
+        se,
+        ee,
+        path,
+        interval=200,
     ):
         """ シミュレーション結果のアニメーション出力 """
+        # 非常事態宣言の日付リストを復元
+        emergency_date = []
+        emergency = False
+        for t, _ in enumerate(snap_shots):
+            if emergency:
+                if t + 1 in ee:
+                    emergency = False
+            else:
+                if t + 1 in se:
+                    emergency = True
+            emergency_date.append(emergency)
+
         plt.clf()
         fig = plt.figure()
         ax = plt.axes()
@@ -279,6 +322,7 @@ class Visualizer:
                 pbar.set_description(
                     "[AnimationOutput: Episode {}]".format(episode)
                 )
+                is_emergency_day = emergency_date[d_idx]
 
                 for h_idx, df in enumerate(snap_shots_in_hours):
                     df.loc[
@@ -300,9 +344,13 @@ class Visualizer:
 
                     artist = scatter(df["x"], df["y"], s=10, c=df["color"])
                     title = text(
-                        -margin,
-                        -margin,
-                        "Day:{} Hour:{}".format(d_idx + 1, h_idx + 7),
+                        0,
+                        0,
+                        "Day:{} Hour:{} {}".format(
+                            d_idx + 1,
+                            h_idx + 7,
+                            "<<EMERGENCY>>" if is_emergency_day else "",
+                        ),
                         fontsize="small",
                     )
                     artists.append([artist, title])

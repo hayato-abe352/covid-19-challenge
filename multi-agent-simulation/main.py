@@ -12,15 +12,15 @@ SIMULATION_PARAMS = {
     # 環境サイズ
     "env_size": 10,
     # 総人口
-    "population": 100,
+    "population": 150,
     # 初期感染者数
     "init_infected_num": 5,
     # Hospitalキャパシティ
     "hospital_capacity": 5,
     # 病院収容までの観察期間
     "observation_period": 5,
-    # エージェントの動きパターン (moving/freeze)
-    "agent_moving": "moving",
+    # 政策を適用するか
+    "has_apply_policy": True,
 }
 
 # 感染症パラメータ
