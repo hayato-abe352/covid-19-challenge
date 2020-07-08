@@ -1,6 +1,1 @@
-/outputs/animations/*
-/outputs/images/*
-/outputs/logs/*
-!/outputs/animations/.gitkeep
-!/outputs/images/.gitkeep
-!/outputs/logs/.gitkeep
+/outputs/*
