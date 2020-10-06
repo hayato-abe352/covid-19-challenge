@@ -14,7 +14,7 @@ class Environment:
         """ 環境を初期化 """
         pass
 
-    def init_agents(selg):
+    def init_agents(self):
         """ エージェントを初期化 """
         pass
 
