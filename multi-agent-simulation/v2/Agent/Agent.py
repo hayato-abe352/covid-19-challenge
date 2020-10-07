@@ -12,9 +12,16 @@ from Simulator.InfectionModel import InfectionModel
 
 class Agent:
     def __init__(
-        self, id, hometown, status: Status, infection_model: InfectionModel
+        self,
+        id: int,
+        hometown: str,
+        status: Status,
+        infection_model: InfectionModel,
     ):
-        # 個体識別番号
+        # 個体識別コード（Worldでユニーク）
+        self.code = "{}_{}".format(hometown, id)
+
+        # 個体識別番号（Environmentでユニーク）
         self.id = id
 
         # 故郷と現在地

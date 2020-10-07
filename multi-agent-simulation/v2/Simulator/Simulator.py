@@ -1,19 +1,20 @@
 """
 MASシミュレーター
 """
-import json
+import sys
 
+from loguru import logger
+
+from Environment.World import World
 from Simulator.InfectionModel import InfectionModel
 
-INFECTION_MODEL_SETTING = "../settings/infection-model.json"
+logger.remove()
+logger.add(sys.stdout, colorize=True, backtrace=False, diagnose=False)
 
 
 class Simulator:
-    def __init__(self):
-        # 感染症モデル
-        infection_settings = self._read_settings(INFECTION_MODEL_SETTING)
-        self.infection_model = InfectionModel(**infection_settings)
-        pass
+    def __init__(self, world_setting: dict, infection_setting: dict):
+        self.world = World(InfectionModel(**infection_setting), world_setting)
 
     def run(self):
         """ シミュレーションを実行 """
@@ -22,12 +23,6 @@ class Simulator:
     def one_epoch(self):
         """ 1回のエポックを実行 """
         pass
-
-    def _read_settings(self, path: str) -> dict:
-        """ 設定情報の読み込み """
-        with open(path, mode="r") as f:
-            settings = json.load(f)
-            return settings
 
     def output_world_graph(self):
         """ World のネットワーク図を出力 """
