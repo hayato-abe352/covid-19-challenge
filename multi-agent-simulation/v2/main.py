@@ -2,19 +2,22 @@
 MASシミュレーションの実行コード
 """
 import pathlib
-import os
 import json
 
 from Simulator.Simulator import Simulator
 
+SIMULATION_SETTING = "./settings/simulation.json"
 ENVIRONMENT_SETTING = "./settings/world.json"
 INFECTION_MODEL_SETTING = "./settings/infection-model.json"
 
 
 def main():
+    simulation_setting = read_settings(SIMULATION_SETTING)
     world_setting = read_settings(ENVIRONMENT_SETTING)
     infection_setting = read_settings(INFECTION_MODEL_SETTING)
-    simulator = Simulator(world_setting, infection_setting)
+
+    simulator = Simulator(simulation_setting, world_setting, infection_setting)
+    simulator.run()
 
 
 def read_settings(path: str) -> dict:

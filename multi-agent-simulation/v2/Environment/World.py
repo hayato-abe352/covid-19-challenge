@@ -3,12 +3,10 @@ Worldクラス定義
     複数の Environment 間のエージェント移動を実現するためのクラス
 """
 import networkx as nx
-import matplotlib.pyplot as plt
 from typing import List, Tuple
 
 from loguru import logger
 
-from Agent.Agent import Agent
 from Environment.Environment import Environment
 
 
@@ -24,30 +22,38 @@ class World:
         self.init_world()
 
         # 全エージェント
-        self.all_agents = self.get_all_agents()
+        self.all_agents = 0
 
     def init_world(self):
         """ World の初期化 """
         # 各ノードの Environment を初期化
+        self.all_agents = []
         for node in self.world_graph.nodes(data=True):
             idx, data = node
             env_setting = self.env_settings[idx]
             data["env"] = Environment(
                 infection_model=self.infection_model, **env_setting
             )
-        logger.info("Worldクラスを初期化しました。ノード数:{}".format(self.node_num))
+            agents = data["env"].get_agents()
+            self.all_agents.extend(agents)
+        logger.info(
+            "Worldクラスを初期化しました。ノード数:{}, 総人口:{}".format(
+                self.node_num, len(self.all_agents)
+            )
+        )
 
-    def get_all_agents(self) -> List[Agent]:
-        """ 全エージェントのリストを取得 """
-        all_agents = []
+    def reset_environments(self):
+        """ Environment をリセット """
+        self.all_agents = []
         for node in self.world_graph.nodes(data=True):
             _, data = node
+            data["env"].init_environment()
             agents = data["env"].get_agents()
-            all_agents.extend(agents)
-        logger.info(
-            "全エージェントを World 配下に格納しました。エージェント数:{}".format(len(all_agents))
-        )
-        return all_agents
+            self.all_agents.extend(agents)
+
+    def get_environments(self) -> List[Environment]:
+        """ Environment のリストを取得 """
+        return [node[1]["env"] for node in self.world_graph.nodes(data=True)]
 
     def get_world_graph(self) -> nx.Graph:
         """ World グラフを取得 """

@@ -26,7 +26,7 @@ class Agent:
 
         # 故郷と現在地
         self.hometown = hometown
-        self.current_location = None
+        self.current_location = hometown
 
         # ステータス
         self.status: Status = status

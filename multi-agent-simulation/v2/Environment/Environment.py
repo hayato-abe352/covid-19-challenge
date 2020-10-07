@@ -36,15 +36,11 @@ class Environment:
         self.init_infection = init_infection
 
         # 環境グラフ（各エージェントをつなぐバラバシ・アルバートグラフ）
-        self.graph = None
-        self.attach = attach
+        self.graph = nx.barabasi_albert_graph(n=self.agent_num, m=attach)
         self.init_environment()
 
     def init_environment(self):
         """ 環境を初期化 """
-        # バラバシ・アルバートグラフを生成
-        self.graph = nx.barabasi_albert_graph(n=self.agent_num, m=self.attach)
-
         # 各ノードのエージェントを初期化
         for node in self.graph.nodes(data=True):
             idx, data = node
@@ -68,6 +64,21 @@ class Environment:
                 self.name.upper(), self.agent_num, self.init_infection
             )
         )
+
+    def decide_agents_next_status(self):
+        """ エージェントの次ステータスを決定 """
+        for node in self.graph.nodes(data=True):
+            idx, data = node
+            neighbors = [
+                self.graph.nodes[n]["agent"] for n in self.graph.neighbors(idx)
+            ]
+            data["agent"].decide_next_status(neighbors)
+
+    def update_agents_status(self):
+        """ エージェントの状態を更新 """
+        for node in self.graph.nodes(data=True):
+            _, data = node
+            data["agent"].update_status()
 
     def count_agent(self, status: Status) -> int:
         """ 該当ステータスのエージェント数をカウント """
