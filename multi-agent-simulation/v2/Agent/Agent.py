@@ -28,6 +28,9 @@ class Agent:
         self.hometown = hometown
         self.current_location = hometown
 
+        # 滞在期間
+        self.stay_period = 0
+
         # ステータス
         self.status: Status = status
         self.next_status: Status = None
@@ -37,6 +40,20 @@ class Agent:
 
         # 潜伏日数（発症までの残り日数）
         self.incubation_count = 0
+
+    @property
+    def is_traveler(self):
+        """ 外部環境に旅行中かどうか """
+        return self.hometown != self.current_location
+
+    def is_stay_in(self, env_name):
+        """ このエージェントの所在が env_name の環境かどうか """
+        return env_name == self.current_location
+
+    def go_back_hometown(self):
+        """ エージェントの所在地を故郷に戻す """
+        self.current_location = self.hometown
+        self.stay_period = 0
 
     def decide_next_status(self, neighbors: List[Agent]):
         """ エージェントの次ステータスを決定 """

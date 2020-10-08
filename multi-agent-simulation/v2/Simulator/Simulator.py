@@ -40,6 +40,13 @@ class Simulator:
 
     def one_epoch(self):
         """ 1回のエポックを実行 """
+        # 全環境の時間経過処理
+        self.world.forward_time()
+
+        # エージェントの環境間移動
+        self.world.move_agent()
+
+        # 感染シミュレート
         environments = self.world.get_environments()
         for env in environments:
             # エージェントの次ステータスを決定
@@ -55,9 +62,10 @@ class Simulator:
             e = env.count_agent(Status.EXPOSED)
             i = env.count_agent(Status.INFECTED)
             r = env.count_agent(Status.RECOVERED)
+            total = s + e + i + r
             logger.info(
-                "{}:\tS:{}\tE:{}\tI:{}\tR:{}".format(
-                    "%12s" % env.name.upper(), s, e, i, r
+                "{}:\tS:{}\tE:{}\tI:{}\tR:{}\tTOTAL:{}".format(
+                    "%12s" % env.name.upper(), s, e, i, r, total
                 )
             )
 
