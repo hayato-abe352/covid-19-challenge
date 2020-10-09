@@ -81,13 +81,23 @@ class Visualizer:
 
     @classmethod
     def output_outflow_chart(
-        cls, path: str, dataframe: pd.DataFrame, title: str = None
+        cls,
+        path: str,
+        dataframe: pd.DataFrame,
+        aggregate=False,
+        title: str = None,
     ):
         """ 流出者グラフを出力 """
         filename = os.path.basename(path)
         logger.info("流出者推移グラフ {} を出力しています...".format(filename))
 
-        sns.lineplot(data=dataframe, x="day", y="outflow", hue="city", ci=None)
+        data = dataframe.copy()
+        if aggregate:
+            grouped = data.groupby(["episode", "day"]).sum().reset_index()
+            sns.lineplot(data=grouped, x="day", y="outflow")
+        else:
+            sns.lineplot(data=data, x="day", y="outflow", hue="city", ci=None)
+
         if title is not None:
             plt.title(title)
         plt.savefig(path)

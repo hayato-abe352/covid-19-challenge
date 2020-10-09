@@ -76,11 +76,11 @@ class World:
             )
 
         # 全エージェントからランダムに移動者を決定
-        traveler_num = int(len(self.all_agents) * self.flow_rate)
-        travelers = random.sample(
-            [agent for agent in self.all_agents if not agent.is_traveler],
-            traveler_num,
-        )
+        travelers = [
+            agent
+            for agent in self.all_agents
+            if not agent.is_traveler and random.random() <= self.flow_rate
+        ]
         self.travelers.extend([(agent.hometown, agent) for agent in travelers])
 
         # 一度移動者の所在地をクリア

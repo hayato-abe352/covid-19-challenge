@@ -153,6 +153,12 @@ class Simulator:
         title = "outflow"
         Visualizer.output_outflow_chart(path, data, title=title)
 
+        path = "output/images/outflow_aggregated.png"
+        title = "outflow (all environments)"
+        Visualizer.output_outflow_chart(
+            path, data, aggregate=True, title=title
+        )
+
     def output_seir_charts_each_city(self):
         """ 各都市におけるSEIRチャートを出力 """
         pass
