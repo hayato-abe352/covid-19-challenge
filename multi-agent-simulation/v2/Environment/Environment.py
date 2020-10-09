@@ -111,7 +111,7 @@ class Environment:
         for relevant_idx in [connect_target] + connect_neighbors:
             self.graph.add_edge(new_idx, relevant_idx)
 
-    def outflow(self):
+    def outflow(self) -> List[Agent]:
         """ 外部環境から来訪しているエージェントの流出処理 """
         # 滞在日数がゼロになった流入者を元の環境に戻す
         outflow_agents = [
@@ -123,6 +123,7 @@ class Environment:
         ]
         for idx, data in outflow_agents:
             data["agent"].go_back_hometown()
+        return outflow_agents
 
     def decide_agents_next_status(self):
         """ エージェントの次ステータスを決定 """

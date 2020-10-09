@@ -36,6 +36,7 @@ class Simulator:
         """ シミュレーションを実行 """
         self.clear_output_dirs()
 
+        # シミュレーションを実行
         for episode in range(self.setting["episode"]):
             logger.info("Episode {} を開始します。".format(episode))
             self.world.reset_environments()
@@ -47,8 +48,8 @@ class Simulator:
                     self.save_record(episode, day + 1, env)
             self.print_agent_status_count()
 
-        self.output_infected_chart()
-        pass
+        # 結果出力
+        self.output_results()
 
     def one_epoch(self):
         """ 1回のエポックを実行 """
@@ -66,11 +67,18 @@ class Simulator:
             # エージェントの状態を更新
             env.update_agents_status()
 
+    def output_results(self):
+        """ シミュレーションの結果出力 """
+        self.output_infected_chart()
+        self.output_population_chart()
+        self.output_outflow_chart()
+
     def save_record(self, episode: int, day: int, env: Environment):
         """ Recorder にデータを記録 """
         city = env.name
+        travelers = len(self.world.get_travelers(env.name))
         seir = self._get_seir_counts(env)
-        self.recorder.add_record(episode, day, city, *seir)
+        self.recorder.add_record(episode, day, city, travelers, *seir)
 
     def print_agent_status_count(self):
         """ 各 Environment の状態別エージェント数をログに出力 """
@@ -94,7 +102,7 @@ class Simulator:
 
     def clear_output_dirs(self):
         """ 出力ディレクトリをクリア """
-        targets = ["outputs/animations/*.mp4", "outputs/images/*mp4"]
+        targets = ["outputs/animations/*.mp4", "outputs/images/*png"]
         for target in targets:
             for path in glob.glob(target):
                 if os.path.isfile(path):
@@ -117,17 +125,33 @@ class Simulator:
         title = "infected & exposed"
         Visualizer.output_infected_chart(path, data, exposed=True, title=title)
 
-        path = "output/images/accumulated_infected.png"
-        title = "accumulated infected"
+        path = "output/images/infected_percentage.png"
+        title = "infected (%)"
         Visualizer.output_infected_chart(
-            path, data, accumulate=True, title=title
+            path, data, percentage=True, title=title
         )
 
-        path = "output/images/accumulated_infected_and_exposed.png"
-        title = "accumulated infected & exposed"
+        path = "output/images/infected_and_exposed_percentage.png"
+        title = "infected & exposed (%)"
         Visualizer.output_infected_chart(
-            path, data, accumulate=True, exposed=True, title=title
+            path, data, exposed=True, percentage=True, title=title
         )
+
+    def output_population_chart(self):
+        """ 各都市の滞在者人口グラフを出力 """
+        data = self.recorder.get_dataframe()
+
+        path = "output/images/population.png"
+        title = "population"
+        Visualizer.output_population_chart(path, data, title=title)
+
+    def output_outflow_chart(self):
+        """ 各都市の流出者推移グラフを出力 """
+        data = self.recorder.get_dataframe()
+
+        path = "output/images/outflow.png"
+        title = "outflow"
+        Visualizer.output_outflow_chart(path, data, title=title)
 
     def output_seir_charts_each_city(self):
         """ 各都市におけるSEIRチャートを出力 """

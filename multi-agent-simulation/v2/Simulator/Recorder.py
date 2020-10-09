@@ -11,6 +11,7 @@ class Recorder:
                 "episode",
                 "day",
                 "city",
+                "outflow",
                 "susceptable",
                 "exposed",
                 "infected",
@@ -22,6 +23,7 @@ class Recorder:
                 "episode": int,
                 "day": int,
                 "city": str,
+                "outflow": int,
                 "susceptable": int,
                 "exposed": int,
                 "infected": int,
@@ -30,13 +32,22 @@ class Recorder:
         )
 
     def add_record(
-        self, episode: int, day: int, city: str, s: int, e: int, i: int, r: int
+        self,
+        episode: int,
+        day: int,
+        city: str,
+        outflow: int,
+        s: int,
+        e: int,
+        i: int,
+        r: int,
     ):
         """ レコードを追加します """
         data = {
             "episode": episode,
             "day": day,
             "city": city,
+            "outflow": outflow,
             "susceptable": s,
             "exposed": e,
             "infected": i,

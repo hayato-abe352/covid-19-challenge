@@ -8,6 +8,7 @@ from typing import List, Tuple
 
 from loguru import logger
 
+from Agent.Agent import Agent
 from Environment.Environment import Environment
 
 
@@ -25,6 +26,11 @@ class World:
 
         # 全エージェント
         self.all_agents = 0
+
+        # １日あたりの流出者リスト [(流出元の環境名, Agent), ...]
+        #   - hometownからの流出者と、hometownへの帰還者の合計値
+        #   - move_agent() を実行する度更新される
+        self.travelers: List[Tuple[str, Agent]] = []
 
     def init_world(self):
         """ World の初期化 """
@@ -60,9 +66,14 @@ class World:
 
     def move_agent(self):
         """ エージェントの Environment 間移動 """
+        self.travelers = []
+
         # 流出処理（滞在期間がゼロになったエージェントを帰還させる）
         for env in self.get_environments():
-            env.outflow()
+            outflow_result = env.outflow()
+            self.travelers.extend(
+                [(env.name, agent) for agent in outflow_result]
+            )
 
         # 全エージェントからランダムに移動者を決定
         traveler_num = int(len(self.all_agents) * self.flow_rate)
@@ -70,6 +81,7 @@ class World:
             [agent for agent in self.all_agents if not agent.is_traveler],
             traveler_num,
         )
+        self.travelers.extend([(agent.hometown, agent) for agent in travelers])
 
         # 一度移動者の所在地をクリア
         for traveler in travelers:
@@ -98,6 +110,10 @@ class World:
     def get_environments(self) -> List[Environment]:
         """ Environment のリストを取得 """
         return [node[1]["env"] for node in self.world_graph.nodes(data=True)]
+
+    def get_travelers(self, env_name: str) -> List[Agent]:
+        """ env_name から流出するエージェントのリストを取得 """
+        return [agent for env, agent in self.travelers if env == env_name]
 
     def get_world_graph(self) -> nx.Graph:
         """ World グラフを取得 """
