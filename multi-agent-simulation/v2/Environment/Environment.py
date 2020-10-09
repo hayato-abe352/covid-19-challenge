@@ -36,6 +36,7 @@ class Environment:
         self.init_infection = init_infection
 
         # 環境グラフ（各エージェントをつなぐバラバシ・アルバートグラフ）
+        self.attach = attach
         self.graph = nx.barabasi_albert_graph(n=self.agent_num, m=attach)
 
         # ノードのコードリスト
@@ -46,7 +47,7 @@ class Environment:
 
     def init_environment(self):
         """ 環境を初期化 """
-        # 各ノードのエージェントを初期化
+        self.graph = nx.barabasi_albert_graph(n=self.agent_num, m=self.attach)
         for node in self.graph.nodes(data=True):
             idx, data = node
             data["agent"] = Agent(
