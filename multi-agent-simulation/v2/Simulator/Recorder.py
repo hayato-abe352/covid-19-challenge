@@ -16,6 +16,7 @@ class Recorder:
                 "exposed",
                 "infected",
                 "recovered",
+                "total",
             ]
         )
         self.dataframe = self.dataframe.astype(
@@ -28,6 +29,7 @@ class Recorder:
                 "exposed": int,
                 "infected": int,
                 "recovered": int,
+                "total": int,
             }
         )
 
@@ -52,6 +54,7 @@ class Recorder:
             "exposed": e,
             "infected": i,
             "recovered": r,
+            "total": s + e + i + r,
         }
         self.dataframe = self.dataframe.append(data, ignore_index=True)
 

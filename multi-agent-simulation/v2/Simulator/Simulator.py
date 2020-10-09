@@ -4,6 +4,7 @@ MASシミュレーター
 import sys
 import glob
 import os
+import itertools
 
 from loguru import logger
 from tqdm import tqdm
@@ -117,25 +118,26 @@ class Simulator:
         """ 感染者推移に関するグラフを出力 """
         data = self.recorder.get_dataframe()
 
-        path = "output/images/infected.png"
-        title = "infected"
-        Visualizer.output_infected_chart(path, data, title=title)
-
-        path = "output/images/infected_and_exposed.png"
-        title = "infected & exposed"
-        Visualizer.output_infected_chart(path, data, exposed=True, title=title)
-
-        path = "output/images/infected_percentage.png"
-        title = "infected (%)"
-        Visualizer.output_infected_chart(
-            path, data, percentage=True, title=title
-        )
-
-        path = "output/images/infected_and_exposed_percentage.png"
-        title = "infected & exposed (%)"
-        Visualizer.output_infected_chart(
-            path, data, exposed=True, percentage=True, title=title
-        )
+        params = [True, False]
+        logger.debug([v for v in itertools.product(params, repeat=3)])
+        for (
+            exposed,
+            total,
+            percentage,
+        ) in itertools.product(params, repeat=3):
+            path = "output/images/infected{}{}{}.png".format(
+                "_and_exposed" if exposed else "",
+                "_total" if total else "",
+                "_percentage" if percentage else "",
+            )
+            title = "infected{}{}{}".format(
+                " + exposed" if exposed else "",
+                " (all envs)" if total else "",
+                " [%]" if percentage else "",
+            )
+            Visualizer.output_infected_chart(
+                path, data, exposed, total, percentage, title
+            )
 
     def output_population_chart(self):
         """ 各都市の滞在者人口グラフを出力 """
@@ -155,9 +157,7 @@ class Simulator:
 
         path = "output/images/outflow_aggregated.png"
         title = "outflow (all environments)"
-        Visualizer.output_outflow_chart(
-            path, data, aggregate=True, title=title
-        )
+        Visualizer.output_outflow_chart(path, data, total=True, title=title)
 
     def output_seir_charts_each_city(self):
         """ 各都市におけるSEIRチャートを出力 """

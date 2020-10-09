@@ -16,6 +16,7 @@ class Visualizer:
         path: str,
         dataframe: pd.DataFrame,
         exposed=False,
+        total=False,
         percentage=False,
         title: str = None,
     ):
@@ -26,11 +27,17 @@ class Visualizer:
         data = dataframe.copy()
         if exposed:
             data = cls._sum_exposed_to_infected(data)
+        if total:
+            data = cls._aggregate_infected(data)
         if percentage:
             data = cls._percentage(data)
             plt.ylim([0.0, 1.0])
 
-        sns.lineplot(data=data, x="day", y="infected", hue="city", ci=None)
+        if total:
+            sns.lineplot(data=data, x="day", y="infected")
+        else:
+            sns.lineplot(data=data, x="day", y="infected", hue="city", ci=None)
+
         if title is not None:
             plt.title(title)
         plt.savefig(path)
@@ -44,14 +51,14 @@ class Visualizer:
         return data
 
     @classmethod
+    def _aggregate_infected(cls, data: pd.DataFrame) -> pd.DataFrame:
+        """ 感染者数を合計します """
+        grouped = data.groupby(["episode", "day"]).sum().reset_index()
+        return grouped
+
+    @classmethod
     def _percentage(cls, data: pd.DataFrame) -> pd.DataFrame:
         """ infected 数をパーセンテージに切り替えます """
-        data["total"] = (
-            data["susceptable"]
-            + data["exposed"]
-            + data["infected"]
-            + data["recovered"]
-        )
         data["infected"] = data["infected"] / data["total"]
         return data
 
@@ -64,12 +71,7 @@ class Visualizer:
         logger.info("滞在者人口推移グラフ {} を出力しています...".format(filename))
 
         data = dataframe.copy()
-        data["population"] = (
-            data["susceptable"]
-            + data["exposed"]
-            + data["infected"]
-            + data["recovered"]
-        )
+        data["population"] = data["total"]
 
         sns.lineplot(data=data, x="day", y="population", hue="city", ci=None)
         if title is not None:
@@ -84,7 +86,7 @@ class Visualizer:
         cls,
         path: str,
         dataframe: pd.DataFrame,
-        aggregate=False,
+        total=False,
         title: str = None,
     ):
         """ 流出者グラフを出力 """
@@ -92,7 +94,7 @@ class Visualizer:
         logger.info("流出者推移グラフ {} を出力しています...".format(filename))
 
         data = dataframe.copy()
-        if aggregate:
+        if total:
             grouped = data.groupby(["episode", "day"]).sum().reset_index()
             sns.lineplot(data=grouped, x="day", y="outflow")
         else:
