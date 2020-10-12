@@ -111,19 +111,11 @@ class Environment:
         for relevant_idx in [connect_target] + connect_neighbors:
             self.graph.add_edge(new_idx, relevant_idx)
 
-    def outflow(self) -> List[Agent]:
+    def outflow(self, outflow_agents: List[Agent]):
         """ 外部環境から来訪しているエージェントの流出処理 """
         # 滞在日数がゼロになった流入者を元の環境に戻す
-        outflow_agents = [
-            node
-            for node in self.graph.nodes(data=True)
-            if node[1]["agent"].is_stay_in(self.name)
-            and node[1]["agent"].is_traveler
-            and node[1]["agent"].stay_period == 0
-        ]
-        for idx, data in outflow_agents:
-            data["agent"].go_back_hometown()
-        return outflow_agents
+        for agent in outflow_agents:
+            agent.go_back_hometown()
 
     def decide_agents_next_status(self):
         """ エージェントの次ステータスを決定 """
@@ -144,14 +136,17 @@ class Environment:
             if data["agent"].is_stay_in(self.name):
                 data["agent"].update_status()
 
-    def count_agent(self, status: Status) -> int:
+    def count_agent(self, status: Status = None) -> int:
         """ 該当ステータスのエージェント数をカウント """
-        targets = [
-            node
-            for node in self.graph.nodes(data=True)
-            if node[1]["agent"].status == status
-            and node[1]["agent"].is_stay_in(self.name)
+        stay_agent = [
+            data["agent"]
+            for _, data in self.graph.nodes(data=True)
+            if data["agent"].is_stay_in(self.name)
         ]
+        if status is None:
+            return len(stay_agent)
+
+        targets = [agent for agent in stay_agent if agent.status == status]
         return len(targets)
 
     def get_graph(self) -> nx.Graph:

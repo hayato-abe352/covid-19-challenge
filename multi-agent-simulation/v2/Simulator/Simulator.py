@@ -103,7 +103,7 @@ class Simulator:
 
     def clear_output_dirs(self):
         """ 出力ディレクトリをクリア """
-        targets = ["outputs/animations/*.mp4", "outputs/images/*png"]
+        targets = ["output/animations/*.mp4", "output/images/*.png"]
         for target in targets:
             for path in glob.glob(target):
                 if os.path.isfile(path):
@@ -119,7 +119,6 @@ class Simulator:
         data = self.recorder.get_dataframe()
 
         params = [True, False]
-        logger.debug([v for v in itertools.product(params, repeat=3)])
         for (
             exposed,
             total,
