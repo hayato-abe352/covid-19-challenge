@@ -6,8 +6,8 @@ from __future__ import annotations
 import random
 from typing import List
 
-from Agent.Status import Status
 from Simulator.InfectionModel import InfectionModel
+from Agent.Status import Status
 
 
 class Agent:

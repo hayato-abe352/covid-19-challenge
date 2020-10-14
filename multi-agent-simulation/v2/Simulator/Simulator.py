@@ -5,12 +5,12 @@ import sys
 import glob
 import os
 import itertools
+from typing import Tuple
 from datetime import datetime
 
 import pandas as pd
 from loguru import logger
 from tqdm import tqdm
-from typing import Tuple
 
 from Agent.Status import Status
 from Environment.World import World

@@ -3,9 +3,9 @@ Worldクラス定義
     複数の Environment 間のエージェント移動を実現するためのクラス
 """
 import random
-import networkx as nx
 from typing import List, Tuple
 
+import networkx as nx
 from loguru import logger
 
 from Agent.Agent import Agent
