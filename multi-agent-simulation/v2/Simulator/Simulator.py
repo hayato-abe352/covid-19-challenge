@@ -5,7 +5,9 @@ import sys
 import glob
 import os
 import itertools
+from datetime import datetime
 
+import pandas as pd
 from loguru import logger
 from tqdm import tqdm
 from typing import Tuple
@@ -70,6 +72,7 @@ class Simulator:
 
     def output_results(self):
         """ シミュレーションの結果出力 """
+        self.output_simulation_result()
         self.output_infected_chart()
         self.output_population_chart()
         self.output_outflow_chart()
@@ -103,12 +106,36 @@ class Simulator:
 
     def clear_output_dirs(self):
         """ 出力ディレクトリをクリア """
-        targets = ["output/animations/*.mp4", "output/images/*.png"]
+        targets = [
+            "output/*.csv",
+            "output/animations/*.mp4",
+            "output/images/*.png",
+        ]
         for target in targets:
             for path in glob.glob(target):
                 if os.path.isfile(path):
                     os.remove(path)
         logger.info("出力先ディレクトリをクリアしました。")
+
+    def load_simulation_result(self, path: str):
+        """ シミュレーション結果の CSV ファイルを読み込み """
+        filename = os.path.basename(path)
+        logger.info("シミュレーション結果 {} を読み込んでいます...".format(filename))
+        data = pd.read_csv(path)
+        self.recorder.set_dataframe(data)
+        logger.info("シミュレーション結果 {} を読み込みました。".format(filename))
+
+    def output_simulation_result(self):
+        """ シミュレーション結果の CSV ファイルを出力 """
+        data = self.recorder.get_dataframe()
+
+        filename = "simulation_result_{}.csv".format(
+            datetime.now().strftime("%Y%m%d_%H%M%S")
+        )
+        logger.info("シミュレーション結果 {} を出力しています...".format(filename))
+        path = "output/{}".format(filename)
+        data.to_csv(path, index=False)
+        logger.info("シミュレーション結果 {} を出力しました。".format(filename))
 
     def output_world_graph(self):
         """ World のネットワーク図を出力 """

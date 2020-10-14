@@ -61,3 +61,7 @@ class Recorder:
     def get_dataframe(self) -> pd.DataFrame:
         """ データフレームを取得します """
         return self.dataframe
+
+    def set_dataframe(self, df: pd.DataFrame):
+        """ データフレームをセットします """
+        self.dataframe = df
