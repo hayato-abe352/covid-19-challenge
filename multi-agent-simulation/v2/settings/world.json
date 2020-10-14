@@ -1,0 +1,82 @@
+{
+  "flow_rate": 0.01,
+  "travel_days": [1, 3],
+  "immigration": {
+    "cover": 0.8,
+    "pcr_recall": 0.7,
+    "pcr_infected_check": {
+      "perform": true,
+      "active_rate": 0.05
+    },
+    "pcr_full_check": {
+      "perform": true,
+      "active_rate": 0.1
+    }
+  },
+  "environments": [
+    {
+      "id": 1,
+      "name": "tokyo",
+      "population": 1000,
+      "city_type": "metropolis",
+      "attach": 6,
+      "init_infection": 3
+    },
+    {
+      "id": 2,
+      "name": "kanagawa",
+      "population": 657,
+      "city_type": "metropolis",
+      "attach": 6,
+      "init_infection": 0
+    },
+    {
+      "id": 3,
+      "name": "osaka",
+      "population": 629,
+      "city_type": "metropolis",
+      "attach": 6,
+      "init_infection": 0
+    },
+    {
+      "id": 4,
+      "name": "aichi",
+      "population": 536,
+      "city_type": "metropolis",
+      "attach": 6,
+      "init_infection": 0
+    },
+    {
+      "id": 5,
+      "name": "saitama",
+      "population": 521,
+      "city_type": "metropolis",
+      "attach": 6,
+      "init_infection": 0
+    },
+    {
+      "id": 6,
+      "name": "hokkaido",
+      "population": 371,
+      "city_type": "regional",
+      "attach": 4,
+      "init_infection": 0
+    },
+    {
+      "id": 7,
+      "name": "miyagi",
+      "population": 164,
+      "city_type": "regional",
+      "attach": 4,
+      "init_infection": 0
+    },
+    {
+      "id": 8,
+      "name": "niigata",
+      "population": 157,
+      "city_type": "regional",
+      "attach": 4,
+      "init_infection": 0
+    }
+  ]
+}
