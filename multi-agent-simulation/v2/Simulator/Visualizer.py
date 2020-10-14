@@ -64,14 +64,22 @@ class Visualizer:
 
     @classmethod
     def output_population_chart(
-        cls, path: str, dataframe: pd.DataFrame, title: str = None
+        cls,
+        path: str,
+        dataframe: pd.DataFrame,
+        mode: str = "total",
+        title: str = None,
     ):
         """ 各都市の滞在者人口グラフを出力 """
         filename = os.path.basename(path)
-        logger.info("滞在者人口推移グラフ {} を出力しています...".format(filename))
+        logger.info("人口推移グラフ {} を出力しています...".format(filename))
 
         data = dataframe.copy()
         data["population"] = data["total"]
+        if mode == "living":
+            data["population"] = data["living"]
+        if mode == "death":
+            data["population"] = data["death"]
 
         sns.lineplot(data=data, x="day", y="population", hue="city", ci=None)
         if title is not None:
@@ -79,7 +87,7 @@ class Visualizer:
         plt.savefig(path)
         plt.clf()
 
-        logger.info("滞在者人口推移グラフ {} を出力しました。".format(filename))
+        logger.info("人口推移グラフ {} を出力しました。".format(filename))
 
     @classmethod
     def output_outflow_chart(

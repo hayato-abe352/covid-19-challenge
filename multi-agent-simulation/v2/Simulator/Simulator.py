@@ -28,10 +28,13 @@ class Simulator:
         self,
         simulation_setting: dict,
         world_setting: dict,
+        agent_setting: dict,
         infection_setting: dict,
     ):
         self.setting = simulation_setting
-        self.world = World(InfectionModel(**infection_setting), world_setting)
+        self.world = World(
+            InfectionModel(**infection_setting), world_setting, agent_setting
+        )
 
         self.recorder = Recorder()
 
@@ -65,6 +68,8 @@ class Simulator:
         # 感染シミュレート
         environments = self.world.get_environments()
         for env in environments:
+            # エージェントの体力値を更新
+            env.update_agents_physical_strength()
             # エージェントの次ステータスを決定
             env.decide_agents_next_status()
             # エージェントの状態を更新
@@ -81,28 +86,31 @@ class Simulator:
         """ Recorder にデータを記録 """
         city = env.name
         travelers = len(self.world.get_travelers(env.name))
-        seir = self._get_seir_counts(env)
-        self.recorder.add_record(episode, day, city, travelers, *seir)
+        seird = self._get_seird_counts(env)
+        self.recorder.add_record(episode, day, city, travelers, *seird)
 
     def print_agent_status_count(self):
         """ 各 Environment の状態別エージェント数をログに出力 """
         environments = self.world.get_environments()
         for env in environments:
-            s, e, i, r = self._get_seir_counts(env)
-            total = s + e + i + r
+            s, e, i, r, d = self._get_seird_counts(env)
+            total = s + e + i + r + d
+            living = s + e + i + r
             logger.info(
-                "{}:\tS:{}\tE:{}\tI:{}\tR:{}\tTOTAL:{}".format(
-                    "%12s" % env.name.upper(), s, e, i, r, total
+                "{}:\tS:{}\tE:{}\tI:{}\tR:{}\tD:{}\t"
+                "TOTAL:{} (living:{})".format(
+                    "%12s" % env.name.upper(), s, e, i, r, d, total, living
                 )
             )
 
-    def _get_seir_counts(self, env: Environment) -> Tuple[int, int, int, int]:
-        """ env の s, e, i, r のカウント結果を取得 """
+    def _get_seird_counts(self, env: Environment) -> Tuple[int, int, int, int]:
+        """ env の s, e, i, r, d のカウント結果を取得 """
         s = env.count_agent(Status.SUSCEPTABLE)
         e = env.count_agent(Status.EXPOSED)
         i = env.count_agent(Status.INFECTED)
         r = env.count_agent(Status.RECOVERED)
-        return s, e, i, r
+        d = env.count_agent(Status.DEATH)
+        return s, e, i, r, d
 
     def clear_output_dirs(self):
         """ 出力ディレクトリをクリア """
@@ -168,10 +176,14 @@ class Simulator:
     def output_population_chart(self):
         """ 各都市の滞在者人口グラフを出力 """
         data = self.recorder.get_dataframe()
+        mode_list = ["total", "living", "death"]
 
-        path = "output/images/population.png"
-        title = "population"
-        Visualizer.output_population_chart(path, data, title=title)
+        for mode in mode_list:
+            path = "output/images/population_{}.png".format(mode)
+            title = "population ({})".format(mode)
+            Visualizer.output_population_chart(
+                path, data, mode=mode, title=title
+            )
 
     def output_outflow_chart(self):
         """ 各都市の流出者推移グラフを出力 """

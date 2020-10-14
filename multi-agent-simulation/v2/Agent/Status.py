@@ -13,3 +13,5 @@ class Status(Enum):
     INFECTED = "Infected"
     # 回復
     RECOVERED = "Recovered"
+    # 死亡
+    DEATH = "Death"

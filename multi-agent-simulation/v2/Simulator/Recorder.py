@@ -16,6 +16,7 @@ class Recorder:
                 "exposed",
                 "infected",
                 "recovered",
+                "death",
                 "total",
             ]
         )
@@ -29,6 +30,7 @@ class Recorder:
                 "exposed": int,
                 "infected": int,
                 "recovered": int,
+                "death": int,
                 "total": int,
             }
         )
@@ -43,6 +45,7 @@ class Recorder:
         e: int,
         i: int,
         r: int,
+        d: int,
     ):
         """ レコードを追加します """
         data = {
@@ -54,7 +57,9 @@ class Recorder:
             "exposed": e,
             "infected": i,
             "recovered": r,
-            "total": s + e + i + r,
+            "death": d,
+            "living": s + e + i + r,
+            "total": s + e + i + r + d,
         }
         self.dataframe = self.dataframe.append(data, ignore_index=True)
 

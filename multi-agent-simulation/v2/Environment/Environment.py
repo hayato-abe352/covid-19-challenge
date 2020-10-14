@@ -11,11 +11,14 @@ from loguru import logger
 from Agent.Agent import Agent
 from Agent.Status import Status
 
+POPULATION_PYRAMID_DATA = "settings/population-pyramid.csv"
+
 
 class Environment:
     def __init__(
         self,
         infection_model,
+        agent_setting,
         id,
         name,
         population,
@@ -29,6 +32,10 @@ class Environment:
 
         # エージェント数（人口）
         self.agent_num = population
+        # 人口ピラミッド
+        self.population_pyramid = pd.read_csv(POPULATION_PYRAMID_DATA)
+        # エージェントの設定
+        self.agent_setting = agent_setting
 
         # 感染症モデル
         self.infection_model = infection_model
@@ -50,8 +57,11 @@ class Environment:
         self.graph = nx.barabasi_albert_graph(n=self.agent_num, m=self.attach)
         for node in self.graph.nodes(data=True):
             idx, data = node
+            age = self.get_agent_age()
             data["agent"] = Agent(
+                agent_setting=self.agent_setting,
                 id=idx,
+                age=age,
                 hometown=self.name,
                 status=Status.SUSCEPTABLE,
                 infection_model=self.infection_model,
@@ -70,6 +80,13 @@ class Environment:
                 self.name.upper(), self.agent_num, self.init_infection
             )
         )
+
+    def get_agent_age(self) -> int:
+        """ エージェントの年齢を決定 """
+        # 人口ピラミッドに従う確率で年齢を確定
+        age_list = list(self.population_pyramid["age"])
+        weight_list = list(self.population_pyramid["weight"])
+        return random.choices(age_list, weight_list, k=1)[0]
 
     def update_code_list(self):
         """ コードリストを更新 """
@@ -116,6 +133,13 @@ class Environment:
         # 滞在日数がゼロになった流入者を元の環境に戻す
         for agent in outflow_agents:
             agent.go_back_hometown()
+
+    def update_agents_physical_strength(self):
+        """ エージェントの体力値を更新 """
+        for node in self.graph.nodes(data=True):
+            _, data = node
+            if data["agent"].is_stay_in(self.name):
+                data["agent"].update_physical_strength()
 
     def decide_agents_next_status(self):
         """ エージェントの次ステータスを決定 """
