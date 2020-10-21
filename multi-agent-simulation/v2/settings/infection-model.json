@@ -4,7 +4,8 @@
   "recovery_prob": 0.05,
   "incubation_period": 3,
   "impact": {
-    "max_damage": 10,
-    "min_damage": 5
+    "max_damage": 1.5,
+    "min_damage": 1.0,
+    "mental_fluctuation": 0.5
   }
 }

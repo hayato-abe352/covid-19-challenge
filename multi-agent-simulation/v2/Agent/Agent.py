@@ -6,6 +6,8 @@ from __future__ import annotations
 import random
 from typing import List
 
+import numpy as np
+
 from Simulator.InfectionModel import InfectionModel
 from Agent.Status import Status
 
@@ -49,11 +51,22 @@ class Agent:
         self.incubation_count = 0
 
         # 体力
-        self.physical_strength = agent_setting["params"]["physical"][
-            "default_strength"
-        ]
+        physical_settings = agent_setting["params"]["physical"]
+        self.physical_strength = physical_settings["default_strength"]
         # 免疫力
         self.immunity = self._get_immunity_value()
+
+        # メンタル
+        mental_settings = agent_setting["params"]["mental"]
+        msp = self._get_mental_stabilize_point(
+            mental_settings["default_stabilize_point_distribution"]
+        )
+        self.mental_stabilize_point = msp
+        self.mental_strength = msp
+        self.stabilize_scale = mental_settings["stabilize_scale"]
+        self.emotional_instability_setting = mental_settings[
+            "emotional_instability"
+        ]
 
     @property
     def is_living(self):
@@ -143,15 +156,47 @@ class Agent:
         # 1日に受ける身体的ダメージを計算
         vd_max = self.infection_model.impact["max_damage"]
         vd_min = self.infection_model.impact["min_damage"]
+        mf = self.infection_model.impact["mental_fluctuation"]
         damage = self._get_physical_damage_from_infection(
-            vd_max, vd_min, self.immunity
+            vd_max, vd_min, mf, self.mental_strength, self.immunity
         )
 
         # 体力値を更新（ダメージ量分を減算）
         self.physical_strength = max(self.physical_strength - damage, 0)
 
+    def update_mental_strength(self):
+        """ 精神力を更新 """
+        # メンタルの更新方向を決定（positive/negative)
+        vec = np.random.normal(
+            loc=self.mental_stabilize_point, scale=self.stabilize_scale
+        )
+        pn = 1 if vec > self.mental_stabilize_point else -1
+
+        # メンタルの更新量を決定（カイ二乗分布で移動量を決定）
+        df = self.emotional_instability_setting["degree_of_freedom"]
+        cor = self.emotional_instability_setting["correction"]
+        amount = cor * np.random.chisquare(df=df)
+
+        # メンタル値の更新
+        new_strength = self.mental_strength + (pn * amount)
+        new_strength = min(max(new_strength, -1), 1)
+        self.mental_strength = new_strength
+
+    def _get_mental_stabilize_point(self, setting):
+        """ 精神力のスタビライズポイントを決定 """
+        loc = setting["loc"]
+        scale = setting["scale"]
+        val = np.random.normal(loc=loc, scale=scale)
+        return min(max(val, -1), 1)
+
     def _get_physical_damage_from_infection(
-        self, vd_max: float, vd_min: float, immunity: float
+        self,
+        vd_max: float,
+        vd_min: float,
+        mf: float,
+        mental: float,
+        immunity: float,
     ):
         """ 感染症による身体的ダメージを取得 """
-        return -(vd_max - vd_min) * immunity + vd_max
+        mental_effect = mf * mental
+        return -(vd_max - vd_min + mental_effect) * immunity + vd_max

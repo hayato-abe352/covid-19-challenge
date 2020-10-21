@@ -134,11 +134,14 @@ class Environment:
         for agent in outflow_agents:
             agent.go_back_hometown()
 
-    def update_agents_physical_strength(self):
-        """ エージェントの体力値を更新 """
+    def update_agents_params(self):
+        """ エージェントのパラメータ（体力・精神力）を更新 """
         for node in self.graph.nodes(data=True):
             _, data = node
             if data["agent"].is_stay_in(self.name):
+                # 精神力を更新
+                data["agent"].update_mental_strength()
+                # 体力を更新
                 data["agent"].update_physical_strength()
 
     def decide_agents_next_status(self):
@@ -172,6 +175,15 @@ class Environment:
 
         targets = [agent for agent in stay_agent if agent.status == status]
         return len(targets)
+
+    def get_average_mental_strength(self) -> float:
+        """ 平均メンタル値を取得 """
+        values = [
+            data["agent"].mental_strength
+            for _, data in self.graph.nodes(data=True)
+            if data["agent"].is_stay_in(self.name)
+        ]
+        return sum(values) / len(values)
 
     def get_graph(self) -> nx.Graph:
         """ Environment グラフを取得 """

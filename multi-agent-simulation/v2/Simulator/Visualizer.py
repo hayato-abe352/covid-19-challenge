@@ -114,4 +114,23 @@ class Visualizer:
         plt.clf()
 
         logger.info("流出者推移グラフ {} を出力しました。".format(filename))
-        pass
+
+    @classmethod
+    def output_mental_strength_chart(
+        cls, path: str, dataframe: pd.DataFrame, title: str = None
+    ):
+        """ メンタル値の変化をプロット """
+        filename = os.path.basename(path)
+        logger.info("平均メンタル値の推移グラフ {} を出力しています...".format(filename))
+
+        sns.lineplot(
+            data=dataframe, x="day", y="avg_mental", hue="city", ci=None
+        )
+        plt.ylim(-1.0, 1.0)
+
+        if title is not None:
+            plt.title(title)
+        plt.savefig(path)
+        plt.clf()
+
+        logger.info("平均メンタル値の推移グラフ {} を出力しました".format(filename))

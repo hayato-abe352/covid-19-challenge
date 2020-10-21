@@ -69,7 +69,7 @@ class Simulator:
         environments = self.world.get_environments()
         for env in environments:
             # エージェントの体力値を更新
-            env.update_agents_physical_strength()
+            env.update_agents_params()
             # エージェントの次ステータスを決定
             env.decide_agents_next_status()
             # エージェントの状態を更新
@@ -81,13 +81,17 @@ class Simulator:
         self.output_infected_chart()
         self.output_population_chart()
         self.output_outflow_chart()
+        self.output_mental_strength_chart()
 
     def save_record(self, episode: int, day: int, env: Environment):
         """ Recorder にデータを記録 """
         city = env.name
         travelers = len(self.world.get_travelers(env.name))
+        average_ms = self._get_average_mental_strength(env)
         seird = self._get_seird_counts(env)
-        self.recorder.add_record(episode, day, city, travelers, *seird)
+        self.recorder.add_record(
+            episode, day, city, travelers, average_ms, *seird
+        )
 
     def print_agent_status_count(self):
         """ 各 Environment の状態別エージェント数をログに出力 """
@@ -98,12 +102,22 @@ class Simulator:
             living = s + e + i + r
             logger.info(
                 "{}:\tS:{}\tE:{}\tI:{}\tR:{}\tD:{}\t"
-                "TOTAL:{} (living:{})".format(
-                    "%12s" % env.name.upper(), s, e, i, r, d, total, living
+                "TOTAL:{} (living:{}, {:.1f}%)".format(
+                    "%12s" % env.name.upper(),
+                    s,
+                    e,
+                    i,
+                    r,
+                    d,
+                    total,
+                    living,
+                    (living / total) * 100,
                 )
             )
 
-    def _get_seird_counts(self, env: Environment) -> Tuple[int, int, int, int]:
+    def _get_seird_counts(
+        self, env: Environment
+    ) -> Tuple[int, int, int, int, int]:
         """ env の s, e, i, r, d のカウント結果を取得 """
         s = env.count_agent(Status.SUSCEPTABLE)
         e = env.count_agent(Status.EXPOSED)
@@ -111,6 +125,10 @@ class Simulator:
         r = env.count_agent(Status.RECOVERED)
         d = env.count_agent(Status.DEATH)
         return s, e, i, r, d
+
+    def _get_average_mental_strength(self, env: Environment) -> float:
+        """ 平均メンタル値を取得 """
+        return env.get_average_mental_strength()
 
     def clear_output_dirs(self):
         """ 出力ディレクトリをクリア """
@@ -196,6 +214,14 @@ class Simulator:
         path = "output/images/outflow_aggregated.png"
         title = "outflow (all environments)"
         Visualizer.output_outflow_chart(path, data, total=True, title=title)
+
+    def output_mental_strength_chart(self):
+        """ 各都市ごとの平均メンタル値推移グラフを出力 """
+        data = self.recorder.get_dataframe()
+
+        path = "output/images/avg_mental_strength.png"
+        title = "average of mental strength"
+        Visualizer.output_mental_strength_chart(path, data, title=title)
 
     def output_seir_charts_each_city(self):
         """ 各都市におけるSEIRチャートを出力 """

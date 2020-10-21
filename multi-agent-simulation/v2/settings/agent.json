@@ -33,7 +33,17 @@
         }
       ]
     },
-    "mental": {},
+    "mental": {
+      "default_stabilize_point_distribution": {
+        "loc": 0.0,
+        "scale": 0.25 
+      },
+      "stabilize_scale": 0.5,
+      "emotional_instability": {
+        "degree_of_freedom": 1,
+        "correction": 0.1
+      }
+    },
     "economical": {}
   }
 }
