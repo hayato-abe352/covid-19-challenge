@@ -2,6 +2,7 @@
 環境定義
 """
 import random
+import math
 from typing import List
 
 import networkx as nx
@@ -25,6 +26,7 @@ class Environment:
         city_type,
         attach,
         init_infection,
+        economy,
     ):
         self.id = id
         self.name = name
@@ -49,6 +51,23 @@ class Environment:
         # ノードのコードリスト
         self.code_list = []
 
+        # 経済関連の設定情報
+        self.economy_setting = economy
+        # 経済力
+        self.finance = economy["init_gdp"]
+        # 税率
+        self.tax_rate = economy["tax_rate"]
+        # 一日の税収
+        self.tmp_tax_revenue = 0
+
+        # エージェント設定にこの環境における平均所得と所得幅を追加
+        self.agent_setting["params"]["economical"]["income_avg"] = economy[
+            "agent_avg_income"
+        ]
+        self.agent_setting["params"]["economical"]["income_range"] = economy[
+            "agent_income_range"
+        ]
+
         self.init_environment()
         self.update_code_list()
 
@@ -67,13 +86,25 @@ class Environment:
                 infection_model=self.infection_model,
             )
 
+        # 公務員を確定
+        cs_num = math.ceil(
+            self.agent_num * self.economy_setting["civil_servants_rate"]
+        )
+        civil_servants = random.sample(self.graph.nodes(data=True), cs_num)
+        for _, data in civil_servants:
+            data["agent"].is_civil_servant = True
+
         # 初期感染者を確定
         init_infected = random.sample(
             self.graph.nodes(data=True), self.init_infection
         )
-        for node in init_infected:
-            _, data = node
+        for _, data in init_infected:
             data["agent"].status = Status.INFECTED
+
+        # 経済パラメータを初期化
+        self.finance = self.economy_setting["init_gdp"]
+        self.tax_rate = self.economy_setting["tax_rate"]
+        self.tmp_tax_revenue = 0
 
         logger.info(
             'Enviromnent "{}" を初期化しました。人口:{}, 初期感染者:{}'.format(
@@ -156,12 +187,66 @@ class Environment:
                         neighbors.append(agent)
                 data["agent"].decide_next_status(neighbors)
 
+    def trade(self):
+        """ エージェント間の経済的取引を実行 """
+        for idx, data in self.graph.nodes(data=True):
+            agent = data["agent"]
+            if agent.is_stay_in(self.name) and agent.is_tradable:
+                for n in self.graph.neighbors(idx):
+                    partner = self.graph.nodes[n]["agent"]
+                    if not partner.is_stay_in(self.name):
+                        continue
+
+                    # Step-1. 取引アクションの決定
+                    a_action = agent.decide_trade_action()
+                    p_action = partner.decide_trade_action()
+
+                    # Step-2. 取引成立判定
+                    if a_action == p_action:
+                        # [buy]-[buy], [sell]-[sell] は取引不成立
+                        continue
+
+                    # Step-3. sell 側が取引金額を決定
+                    price = agent.get_trade_price()
+                    if p_action == "sell":
+                        price = partner.get_trade_price()
+
+                    # Step-4. 取引実行 および 税収処理
+                    tax = math.ceil(price * self.tax_rate)
+                    trade_price = price - tax
+                    agent.trade(trade_price, a_action)
+                    partner.trade(trade_price, p_action)
+                    self.pay_tax(tax)
+
     def update_agents_status(self):
         """ エージェントの状態を更新 """
         for node in self.graph.nodes(data=True):
             _, data = node
             if data["agent"].is_stay_in(self.name):
                 data["agent"].update_status()
+
+    def pay_tax(self, tax):
+        """ 税金を納める """
+        self.tmp_tax_revenue += tax
+
+    def update_finance(self):
+        """ 経済力パラメータの更新（税収を加算） """
+        self.finance += self.tmp_tax_revenue
+        self.tmp_tax_revenue = 0
+
+    def pay_salary_to_public_officials(self):
+        """ 公務員エージェントに給料を払う """
+        civil_servants = [
+            data["agent"]
+            for _, data in self.graph.nodes(data=True)
+            if data["agent"].is_civil_servant
+        ]
+        salary = (
+            self.tmp_tax_revenue
+            * self.economy_setting["civil_servants_salary_rate"]
+        )
+        for agent in civil_servants:
+            agent.receive_salary(salary)
 
     def count_agent(self, status: Status = None) -> int:
         """ 該当ステータスのエージェント数をカウント """

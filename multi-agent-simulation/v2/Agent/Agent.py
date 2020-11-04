@@ -68,6 +68,18 @@ class Agent:
             "emotional_instability"
         ]
 
+        # 経済力
+        economy_setting = agent_setting["params"]["economical"]
+        isp = self._get_income_stabilize_point(
+            economy_setting["income_avg"], economy_setting["income_range"]
+        )
+        self.income_stabilize_point = isp
+        self.income = isp
+        self.trade_price = 0
+
+        # 公務員かどうか（公務員の場合 env から収入を得られる）
+        self.is_civil_servant = False
+
     @property
     def is_living(self):
         """ 生存しているかどうか """
@@ -77,6 +89,11 @@ class Agent:
     def is_traveler(self):
         """ 外部環境に旅行中かどうか """
         return self.hometown != self.current_location
+
+    @property
+    def is_tradable(self):
+        """ 取引可能かどうか """
+        return self.status not in [Status.INFECTED, Status.DEATH]
 
     def is_stay_in(self, env_name):
         """ このエージェントの所在が env_name の環境かどうか """
@@ -97,6 +114,22 @@ class Agent:
             if min(s["age_range"]) <= self.age <= max(s["age_range"])
         ][0]
         return immunity_setting["value"]
+
+    def trade(self, price, action):
+        """ 取引額の変化を記録 """
+        if action == "buy":
+            # 買い手の場合 => 所得は減少
+            self.trade_price = -price
+        elif action == "sell":
+            # 売り手の場合 => 所得は増加
+            self.trade_price = +price
+
+    def get_trade_price(self) -> int:
+        """ 取引額を決定 """
+        base_line = abs(self.income_stabilize_point - self.income)
+        scale = base_line * 0.5
+        price = int(np.random.normal(loc=base_line, scale=scale))
+        return max(price, 0)
 
     def decide_next_status(self, neighbors: List[Agent]):
         """ エージェントの次ステータスを決定 """
@@ -142,6 +175,31 @@ class Agent:
             if random.random() <= self.infection_model.recovery_prob:
                 self.next_status = Status.RECOVERED
 
+    def decide_trade_action(self) -> str:
+        """ 取引アクションを決定 """
+        # 取引アクションの種類:
+        #     sell (売り手): 自身の所得を増加させる取引
+        #     buy  (買い手): 自身の所得を低下させる取引
+        # 取引アクションの選択確率：
+        #     isp > income : seller が発生しやすい
+        #     isp < income : buyer が発生しやすい
+        # 取引の成立条件:
+        #     自身と相手のアクションが [s]-[b] または [b]-[s] の組み合わせの場合のみ成立
+        #     [s]-[s] や [b]-[b] の場合は取引が成立しない
+
+        # isp と income の差から sell と buy の比重を算出
+        max_val = self.income_stabilize_point * 2
+        buy_w = self.income / max_val
+        sell_w = 1 - buy_w
+
+        # 取引アクションを確率で決定
+        action = random.choices(["buy", "sell"], weights=[buy_w, sell_w])[0]
+        return action
+    
+    def receive_salary(self, salary):
+        """ 給料を受け取る """
+        self.income += salary
+
     def update_status(self):
         """ エージェントのステータスを更新 """
         self.status = self.next_status
@@ -182,12 +240,24 @@ class Agent:
         new_strength = min(max(new_strength, -1), 1)
         self.mental_strength = new_strength
 
+    def update_income(self):
+        """ 取引額に応じて所得を変化 """
+        self.income = self.income + self.trade_price
+        self.trade_price = 0
+
     def _get_mental_stabilize_point(self, setting):
         """ 精神力のスタビライズポイントを決定 """
         loc = setting["loc"]
         scale = setting["scale"]
         val = np.random.normal(loc=loc, scale=scale)
         return min(max(val, -1), 1)
+
+    def _get_income_stabilize_point(self, avg, scale_rate):
+        """ 所得のスタビライズポイントを決定 """
+        loc = avg
+        scale = avg * scale_rate
+        val = np.random.normal(loc=loc, scale=scale)
+        return val
 
     def _get_physical_damage_from_infection(
         self,

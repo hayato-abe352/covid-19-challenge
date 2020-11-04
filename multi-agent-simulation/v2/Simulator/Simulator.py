@@ -68,8 +68,15 @@ class Simulator:
         # 感染シミュレート
         environments = self.world.get_environments()
         for env in environments:
+            # 公務員エージェントに給料を支給
+            env.pay_salary_to_public_officials()
+            # 前日の税収を env の経済力に反映
+            env.update_finance()
+
             # エージェントの体力値を更新
             env.update_agents_params()
+            # エージェント間の経済取引を実行
+            env.trade()
             # エージェントの次ステータスを決定
             env.decide_agents_next_status()
             # エージェントの状態を更新
