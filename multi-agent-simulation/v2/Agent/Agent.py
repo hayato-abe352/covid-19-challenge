@@ -95,9 +95,13 @@ class Agent:
         """ 取引可能かどうか """
         return self.status not in [Status.INFECTED, Status.DEATH]
 
-    def is_stay_in(self, env_name):
+    def is_stay_in(self, env_name) -> bool:
         """ このエージェントの所在が env_name の環境かどうか """
         return env_name == self.current_location
+
+    def belong_to(self, env_name) -> bool:
+        """　このエージェントが env_name に所属しているかどうか　(公務員の所属確認) """
+        return env_name == self.hometown
 
     def go_back_hometown(self):
         """ エージェントの所在地を故郷に戻す """
@@ -128,8 +132,18 @@ class Agent:
         """ 取引額を決定 """
         base_line = abs(self.income_stabilize_point - self.income)
         scale = base_line * 0.5
-        price = int(np.random.normal(loc=base_line, scale=scale))
-        return max(price, 0)
+        price = np.random.normal(loc=base_line, scale=scale)
+        price = min(price, self.income)
+
+        min_price = self.agent_setting["params"]["economical"][
+            "min_trade_price"
+        ]
+        max_price = self.agent_setting["params"]["economical"][
+            "max_trade_price"
+        ]
+        price = min(price, max_price)
+        price = max(price, min_price)
+        return int(price)
 
     def decide_next_status(self, neighbors: List[Agent]):
         """ エージェントの次ステータスを決定 """
@@ -187,15 +201,22 @@ class Agent:
         #     自身と相手のアクションが [s]-[b] または [b]-[s] の組み合わせの場合のみ成立
         #     [s]-[s] や [b]-[b] の場合は取引が成立しない
 
+        # 所得が最低取引額以下の場合、sell のみ
+        min_price = self.agent_setting["params"]["economical"][
+            "min_trade_price"
+        ]
+        if self.income < min_price:
+            return "sell"
+
         # isp と income の差から sell と buy の比重を算出
         max_val = self.income_stabilize_point * 2
-        buy_w = self.income / max_val
+        buy_w = min(self.income / max_val, 1)
         sell_w = 1 - buy_w
 
         # 取引アクションを確率で決定
         action = random.choices(["buy", "sell"], weights=[buy_w, sell_w])[0]
         return action
-    
+
     def receive_salary(self, salary):
         """ 給料を受け取る """
         self.income += salary

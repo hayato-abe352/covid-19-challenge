@@ -89,15 +89,29 @@ class Simulator:
         self.output_population_chart()
         self.output_outflow_chart()
         self.output_mental_strength_chart()
+        self.output_finance_chart()
+        self.output_tax_revenue_chart()
+        self.output_income_chart()
 
     def save_record(self, episode: int, day: int, env: Environment):
         """ Recorder にデータを記録 """
         city = env.name
         travelers = len(self.world.get_travelers(env.name))
         average_ms = self._get_average_mental_strength(env)
+        finance = self._get_finance(env)
+        tax_revenue = self._get_tax_revenue(env)
+        average_income = self._get_average_income(env)
         seird = self._get_seird_counts(env)
         self.recorder.add_record(
-            episode, day, city, travelers, average_ms, *seird
+            episode,
+            day,
+            city,
+            travelers,
+            average_ms,
+            finance,
+            tax_revenue,
+            average_income,
+            *seird,
         )
 
     def print_agent_status_count(self):
@@ -136,6 +150,18 @@ class Simulator:
     def _get_average_mental_strength(self, env: Environment) -> float:
         """ 平均メンタル値を取得 """
         return env.get_average_mental_strength()
+
+    def _get_finance(self, env: Environment) -> float:
+        """ Environment の経済力を取得 """
+        return env.get_finance()
+
+    def _get_tax_revenue(self, env: Environment) -> float:
+        """ Environment の税収を取得 """
+        return env.get_tax_revenue()
+
+    def _get_average_income(self, env: Environment) -> float:
+        """ 平均所得を取得 """
+        return env.get_average_income()
 
     def clear_output_dirs(self):
         """ 出力ディレクトリをクリア """
@@ -229,6 +255,30 @@ class Simulator:
         path = "output/images/avg_mental_strength.png"
         title = "average of mental strength"
         Visualizer.output_mental_strength_chart(path, data, title=title)
+
+    def output_finance_chart(self):
+        """ 各都市の経済力推移グラフを出力 """
+        data = self.recorder.get_dataframe()
+
+        path = "output/images/finance.png"
+        title = "finance"
+        Visualizer.output_finance_chart(path, data, title=title)
+
+    def output_tax_revenue_chart(self):
+        """ 各都市の税収グラフを出力 """
+        data = self.recorder.get_dataframe()
+
+        path = "output/images/tax_revenue.png"
+        title = "tax revenue"
+        Visualizer.output_tax_revenue_chart(path, data, title=title)
+
+    def output_income_chart(self):
+        """ 各都市誤との平均所得推移グラフを出力 """
+        data = self.recorder.get_dataframe()
+
+        path = "output/images/avg_income.png"
+        title = "average of income"
+        Visualizer.output_income_chart(path, data, title=title)
 
     def output_seir_charts_each_city(self):
         """ 各都市におけるSEIRチャートを出力 """

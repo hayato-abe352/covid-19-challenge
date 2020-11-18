@@ -213,10 +213,19 @@ class Environment:
 
                     # Step-4. 取引実行 および 税収処理
                     tax = math.ceil(price * self.tax_rate)
-                    trade_price = price - tax
-                    agent.trade(trade_price, a_action)
-                    partner.trade(trade_price, p_action)
+                    if a_action == "sell":
+                        # agent: 売り手、partner: 買い手
+                        agent.trade(price, a_action)
+                        partner.trade(price + tax, p_action)
+                    else:
+                        # agent: 買い手、partner: 売り手
+                        agent.trade(price + tax, a_action)
+                        partner.trade(price, p_action)
                     self.pay_tax(tax)
+
+                    # Step-5. 取引実績の更新
+                    agent.update_income()
+                    partner.update_income()
 
     def update_agents_status(self):
         """ エージェントの状態を更新 """
@@ -240,13 +249,12 @@ class Environment:
             data["agent"]
             for _, data in self.graph.nodes(data=True)
             if data["agent"].is_civil_servant
+            and data["agent"].belong_to(self.name)
         ]
-        salary = (
-            self.tmp_tax_revenue
-            * self.economy_setting["civil_servants_salary_rate"]
-        )
+        salary = self.economy_setting["civil_servants_salary"]
         for agent in civil_servants:
             agent.receive_salary(salary)
+            self.finance -= salary
 
     def count_agent(self, status: Status = None) -> int:
         """ 該当ステータスのエージェント数をカウント """
@@ -265,6 +273,23 @@ class Environment:
         """ 平均メンタル値を取得 """
         values = [
             data["agent"].mental_strength
+            for _, data in self.graph.nodes(data=True)
+            if data["agent"].is_stay_in(self.name)
+        ]
+        return sum(values) / len(values)
+
+    def get_finance(self) -> float:
+        """ 経済力を取得 """
+        return self.finance
+
+    def get_tax_revenue(self) -> float:
+        """ 税収を取得 """
+        return self.tmp_tax_revenue
+
+    def get_average_income(self) -> float:
+        """ 平均所得を取得 """
+        values = [
+            data["agent"].income
             for _, data in self.graph.nodes(data=True)
             if data["agent"].is_stay_in(self.name)
         ]

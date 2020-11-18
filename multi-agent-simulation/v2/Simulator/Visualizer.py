@@ -134,3 +134,56 @@ class Visualizer:
         plt.clf()
 
         logger.info("平均メンタル値の推移グラフ {} を出力しました".format(filename))
+
+    @classmethod
+    def output_finance_chart(
+        cls, path: str, dataframe: pd.DataFrame, title: str = None
+    ):
+        """ 各 env の経済力の変化をプロット """
+        filename = os.path.basename(path)
+        logger.info("経済力の推移グラフ {} を出力しています...".format(filename))
+
+        sns.lineplot(data=dataframe, x="day", y="finance", hue="city", ci=None)
+
+        if title is not None:
+            plt.title(title)
+        plt.savefig(path)
+        plt.clf()
+
+        logger.info("経済力の推移グラフ {} を出力しました".format(filename))
+
+    @classmethod
+    def output_tax_revenue_chart(
+        cls, path: str, dataframe: pd.DataFrame, title: str = None
+    ):
+        """ 各 env の税収をプロット """
+        filename = os.path.basename(path)
+        logger.info("税収の推移グラフ {} を出力しています...".format(filename))
+
+        sns.lineplot(data=dataframe, x="day", y="tax_revenue", hue="city", ci=None)
+
+        if title is not None:
+            plt.title(title)
+        plt.savefig(path)
+        plt.clf()
+
+        logger.info("税収の推移グラフ {} を出力しました".format(filename))
+
+    @classmethod
+    def output_income_chart(
+        cls, path: str, dataframe: pd.DataFrame, title: str = None
+    ):
+        """ 平均所得の変化をプロット """
+        filename = os.path.basename(path)
+        logger.info("平均所得の推移グラフ {} を出力しています...".format(filename))
+
+        sns.lineplot(
+            data=dataframe, x="day", y="avg_income", hue="city", ci=None
+        )
+
+        if title is not None:
+            plt.title(title)
+        plt.savefig(path)
+        plt.clf()
+
+        logger.info("平均所得の推移グラフ {} を出力しました".format(filename))

@@ -27,7 +27,7 @@
         "agent_income_range": 0.1,
         "tax_rate": 0.1,
         "civil_servants_rate": 0.06,
-        "civil_servants_salary_rate": 0.01
+        "civil_servants_salary": 1000
       }
     },
     {
@@ -43,7 +43,7 @@
         "agent_income_range": 0.1,
         "tax_rate": 0.1,
         "civil_servants_rate": 0.06,
-        "civil_servants_salary_rate": 0.01
+        "civil_servants_salary": 1000
       }
     },
     {
@@ -59,7 +59,7 @@
         "agent_income_range": 0.1,
         "tax_rate": 0.1,
         "civil_servants_rate": 0.06,
-        "civil_servants_salary_rate": 0.01
+        "civil_servants_salary": 1000
       }
     },
     {
@@ -75,7 +75,7 @@
         "agent_income_range": 0.1,
         "tax_rate": 0.1,
         "civil_servants_rate": 0.06,
-        "civil_servants_salary_rate": 0.01
+        "civil_servants_salary": 1000
       }
     },
     {
@@ -91,7 +91,7 @@
         "agent_income_range": 0.1,
         "tax_rate": 0.1,
         "civil_servants_rate": 0.06,
-        "civil_servants_salary_rate": 0.01
+        "civil_servants_salary": 1000
       }
     },
     {
@@ -107,7 +107,7 @@
         "agent_income_range": 0.1,
         "tax_rate": 0.1,
         "civil_servants_rate": 0.06,
-        "civil_servants_salary_rate": 0.01
+        "civil_servants_salary": 1000
       }
     },
     {
@@ -123,7 +123,7 @@
         "agent_income_range": 0.1,
         "tax_rate": 0.1,
         "civil_servants_rate": 0.06,
-        "civil_servants_salary_rate": 0.01
+        "civil_servants_salary": 1000
       }
     },
     {
@@ -139,7 +139,7 @@
         "agent_income_range": 0.1,
         "tax_rate": 0.1,
         "civil_servants_rate": 0.06,
-        "civil_servants_salary_rate": 0.01
+        "civil_servants_salary": 1000
       }
     }
   ]
