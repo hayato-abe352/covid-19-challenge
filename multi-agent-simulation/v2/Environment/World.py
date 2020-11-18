@@ -14,12 +14,14 @@ from Environment.Environment import Environment
 
 
 class World:
-    def __init__(self, infection_model, setting):
+    def __init__(self, infection_model, world_setting, agent_setting):
         self.infection_model = infection_model
-        self.flow_rate = setting["flow_rate"]
-        self.travel_days = setting["travel_days"]
-        self.env_settings = setting["environments"]
-        self.immigration_settings = setting["immigration"]
+        self.flow_rate = world_setting["flow_rate"]
+        self.travel_days = world_setting["travel_days"]
+        self.env_settings = world_setting["environments"]
+        self.immigration_settings = world_setting["immigration"]
+
+        self.agent_setting = agent_setting
 
         # Worldグラフ（各地域をつなぐ完全グラフ）
         self.node_num = len(self.env_settings)
@@ -42,7 +44,9 @@ class World:
             idx, data = node
             env_setting = self.env_settings[idx]
             data["env"] = Environment(
-                infection_model=self.infection_model, **env_setting
+                infection_model=self.infection_model,
+                agent_setting=self.agent_setting,
+                **env_setting
             )
             agents = data["env"].get_agents()
             self.all_agents.extend(agents)
@@ -77,6 +81,7 @@ class World:
                 data["agent"]
                 for _, data in env.graph.nodes(data=True)
                 if data["agent"].is_stay_in(env.name)
+                and data["agent"].is_living
                 and data["agent"].is_traveler
                 and data["agent"].stay_period == 0
             ]
@@ -94,7 +99,9 @@ class World:
         travelers = [
             agent
             for agent in self.all_agents
-            if not agent.is_traveler and random.random() <= self.flow_rate
+            if agent.is_living
+            and not agent.is_traveler
+            and random.random() <= self.flow_rate
         ]
 
         # 流出可能なエージェントのみを抽出（出国審査処理）

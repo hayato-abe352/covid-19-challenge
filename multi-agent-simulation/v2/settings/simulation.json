@@ -1,4 +1,6 @@
 {
-  "episode": 5,
-  "days": 90
+  "episode": 3,
+  "days": 90,
+  "wake_up": 30,
+  "wake_up_visualize": false
 }

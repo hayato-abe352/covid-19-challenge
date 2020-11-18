@@ -1,0 +1,52 @@
+{
+  "params": {
+    "physical": {
+      "default_strength": 100,
+      "default_immunity": [
+        {
+          "age_range": [0, 10],
+          "value": 0.2
+        },
+        {
+          "age_range": [11, 20],
+          "value": 0.7
+        },
+        {
+          "age_range": [21, 40],
+          "value": 1.0
+        },
+        {
+          "age_range": [41, 50],
+          "value": 0.5
+        },
+        {
+          "age_range": [51, 60],
+          "value": 0.2
+        },
+        {
+          "age_range": [61, 80],
+          "value": 0.1
+        },
+        {
+          "age_range": [81, 110],
+          "value": 0.0
+        }
+      ]
+    },
+    "mental": {
+      "default_stabilize_point_distribution": {
+        "loc": 0.0,
+        "scale": 0.25 
+      },
+      "stabilize_scale": 0.5,
+      "emotional_instability": {
+        "degree_of_freedom": 1,
+        "correction": 0.1
+      }
+    },
+    "economical": {
+      "max_trade_price": 1000000,
+      "min_trade_price": 1000
+    }
+  }
+}
