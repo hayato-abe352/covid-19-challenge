@@ -44,20 +44,39 @@ class Simulator:
 
         # シミュレーションを実行
         for episode in range(self.setting["episode"]):
-            logger.info("Episode {} を開始します。".format(episode))
+            logger.info(
+                "Episode {} を開始します。days={} (+ wake up {})".format(
+                    episode,
+                    self.setting["days"],
+                    self.setting["wake_up"],
+                )
+            )
             self.world.reset_environments()
-            for day in tqdm(range(self.setting["days"])):
-                # エポック実行
-                self.one_epoch()
-                # データを記録
-                for env in self.world.get_environments():
-                    self.save_record(episode, day + 1, env)
+
+            days = self.setting["days"] + self.setting["wake_up"]
+            with tqdm(range(days)) as pbar:
+                for day in pbar:
+                    is_waking_up = day < self.setting["wake_up"]
+                    if is_waking_up:
+                        # ウェイクアップ期間中
+                        pbar.colour = "yellow"
+                    else:
+                        pbar.colour = "white"
+
+                    # エポック実行
+                    self.one_epoch(is_waking_up=is_waking_up)
+
+                    # データを記録
+                    if self.setting["wake_up_visualize"] or (not is_waking_up):
+                        record_day = (day - self.setting["wake_up"]) + 1
+                        for env in self.world.get_environments():
+                            self.save_record(episode, record_day, env)
             self.print_agent_status_count()
 
         # 結果出力
         self.output_results()
 
-    def one_epoch(self):
+    def one_epoch(self, is_waking_up=False):
         """ 1回のエポックを実行 """
         # 全環境の時間経過処理
         self.world.forward_time()
@@ -72,11 +91,15 @@ class Simulator:
             env.pay_salary_to_public_officials()
             # 前日の税収を env の経済力に反映
             env.update_finance()
+            # エージェント間の経済取引を実行
+            env.trade()
+
+            # ウェイクアップ時は感染拡大をシミュレートしない
+            if is_waking_up:
+                continue
 
             # エージェントの体力値を更新
             env.update_agents_params()
-            # エージェント間の経済取引を実行
-            env.trade()
             # エージェントの次ステータスを決定
             env.decide_agents_next_status()
             # エージェントの状態を更新

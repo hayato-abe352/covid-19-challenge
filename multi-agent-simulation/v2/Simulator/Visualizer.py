@@ -160,7 +160,9 @@ class Visualizer:
         filename = os.path.basename(path)
         logger.info("税収の推移グラフ {} を出力しています...".format(filename))
 
-        sns.lineplot(data=dataframe, x="day", y="tax_revenue", hue="city", ci=None)
+        sns.lineplot(
+            data=dataframe, x="day", y="tax_revenue", hue="city", ci=None
+        )
 
         if title is not None:
             plt.title(title)
