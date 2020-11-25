@@ -3,5 +3,5 @@
   "days": 90,
   "wake_up": 30,
   "wake_up_visualize": true,
-  "hospital": true
+  "global_hospital_opetaring_setting": true
 }

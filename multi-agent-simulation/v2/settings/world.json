@@ -21,13 +21,16 @@
       "city_type": "metropolis",
       "attach": 6,
       "init_infection": 3,
+      "hospital": true,
+      "hospital_bed_num": 120,
       "economy": {
         "init_gdp": 7580000,
         "agent_avg_income": 5427,
         "agent_income_range": 0.1,
         "tax_rate": 0.1,
         "civil_servants_rate": 0.5,
-        "civil_servants_salary": 500
+        "civil_servants_salary": 500,
+        "hospital_operating_cost": 500
       }
     },
     {
@@ -37,13 +40,16 @@
       "city_type": "metropolis",
       "attach": 6,
       "init_infection": 0,
+      "hospital": true,
+      "hospital_bed_num": 80,
       "economy": {
         "init_gdp": 2525000,
         "agent_avg_income": 3227,
         "agent_income_range": 0.1,
         "tax_rate": 0.1,
         "civil_servants_rate": 0.5,
-        "civil_servants_salary": 500
+        "civil_servants_salary": 500,
+        "hospital_operating_cost": 500
       }
     },
     {
@@ -53,13 +59,16 @@
       "city_type": "metropolis",
       "attach": 6,
       "init_infection": 0,
+      "hospital": true,
+      "hospital_bed_num": 80,
       "economy": {
         "init_gdp": 2811000,
         "agent_avg_income": 3183,
         "agent_income_range": 0.1,
         "tax_rate": 0.1,
         "civil_servants_rate": 0.5,
-        "civil_servants_salary": 500
+        "civil_servants_salary": 500,
+        "hospital_operating_cost": 500
       }
     },
     {
@@ -69,13 +78,16 @@
       "city_type": "metropolis",
       "attach": 6,
       "init_infection": 0,
+      "hospital": true,
+      "hospital_bed_num": 50,
       "economy": {
         "init_gdp": 2870000,
         "agent_avg_income": 3685,
         "agent_income_range": 0.1,
         "tax_rate": 0.1,
         "civil_servants_rate": 0.5,
-        "civil_servants_salary": 500
+        "civil_servants_salary": 500,
+        "hospital_operating_cost": 500
       }
     },
     {
@@ -85,13 +97,16 @@
       "city_type": "metropolis",
       "attach": 6,
       "init_infection": 0,
+      "hospital": true,
+      "hospital_bed_num": 50,
       "economy": {
         "init_gdp": 1661000,
         "agent_avg_income": 3067,
         "agent_income_range": 0.1,
         "tax_rate": 0.1,
         "civil_servants_rate": 0.5,
-        "civil_servants_salary": 500
+        "civil_servants_salary": 500,
+        "hospital_operating_cost": 500
       }
     },
     {
@@ -101,13 +116,16 @@
       "city_type": "regional",
       "attach": 4,
       "init_infection": 0,
+      "hospital": true,
+      "hospital_bed_num": 10,
       "economy": {
         "init_gdp": 1376000,
         "agent_avg_income": 2682,
         "agent_income_range": 0.1,
         "tax_rate": 0.1,
         "civil_servants_rate": 0.5,
-        "civil_servants_salary": 500
+        "civil_servants_salary": 500,
+        "hospital_operating_cost": 500
       }
     },
     {
@@ -117,13 +135,16 @@
       "city_type": "regional",
       "attach": 4,
       "init_infection": 0,
+      "hospital": true,
+      "hospital_bed_num": 10,
       "economy": {
         "init_gdp": 676000,
         "agent_avg_income": 2944,
         "agent_income_range": 0.1,
         "tax_rate": 0.1,
         "civil_servants_rate": 0.5,
-        "civil_servants_salary": 500
+        "civil_servants_salary": 500,
+        "hospital_operating_cost": 500
       }
     },
     {
@@ -133,13 +154,16 @@
       "city_type": "regional",
       "attach": 4,
       "init_infection": 0,
+      "hospital": true,
+      "hospital_bed_num": 10,
       "economy": {
         "init_gdp": 639000,
         "agent_avg_income": 2873,
         "agent_income_range": 0.1,
         "tax_rate": 0.1,
         "civil_servants_rate": 0.5,
-        "civil_servants_salary": 500
+        "civil_servants_salary": 500,
+        "hospital_operating_cost": 500
       }
     }
   ]

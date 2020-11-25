@@ -36,7 +36,7 @@ class Simulator:
             InfectionModel(**infection_setting),
             world_setting,
             agent_setting,
-            simulation_setting["hospital"],
+            simulation_setting["global_hospital_opetaring_setting"],
         )
 
         self.recorder = Recorder()
@@ -105,8 +105,11 @@ class Simulator:
             env.update_agents_params()
             # エージェントの次ステータスを決定
             env.decide_agents_next_status()
-            # エージェントの状態を更新
+            # エージェントの状態を更新 + 入院/退院処理
             env.update_agents_status()
+
+            # 患者数に応じて病院稼働コストを消費
+            env.consume_hospital_operating_cost()
 
     def output_results(self):
         """ シミュレーションの結果出力 """

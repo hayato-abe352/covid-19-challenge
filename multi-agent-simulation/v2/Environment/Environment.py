@@ -20,13 +20,15 @@ class Environment:
         self,
         infection_model,
         agent_setting,
-        hospital_setting,
+        global_hospital_setting,
         id,
         name,
         population,
         city_type,
         attach,
         init_infection,
+        hospital,
+        hospital_bed_num,
         economy,
     ):
         self.id = id
@@ -72,7 +74,11 @@ class Environment:
         # 病院に隔離中のエージェント情報
         self.hospital = []
         # 病院機能を稼働させるかどうか
-        self.can_hospitalized = hospital_setting
+        self.can_hospitalized = hospital and global_hospital_setting
+        # 病院の病床数
+        self.hospital_bed_num = hospital_bed_num
+        # 病院の稼働コスト (入院患者一人あたりでコストが発生)
+        self.hospital_operating_cost = economy["hospital_operating_cost"]
 
         self.init_environment()
         self.update_code_list()
@@ -258,8 +264,9 @@ class Environment:
 
     def admit_to_hospital(self, agent_code):
         """ エージェントを病院に入院させる """
-        if not self.can_hospitalized:
-            # 入院機能が off のとき
+        patient_num = len(self.hospital)
+        if not self.can_hospitalized or patient_num > self.hospital_bed_num:
+            # 入院機能が off のとき または 病床が埋まっているとき
             return
 
         # 感染症と認知される閾値
@@ -273,6 +280,12 @@ class Environment:
         """ エージェントを病院から退院させる """
         if agent_code in self.hospital:
             self.hospital.remove(agent_code)
+
+    def consume_hospital_operating_cost(self):
+        """ 病院を稼働させる (入院患者数の運営費を消費させる) """
+        patient_num = len(self.hospital)
+        operating_cost = patient_num * self.hospital_operating_cost
+        self.finance = self.finance - operating_cost
 
     def pay_tax(self, tax):
         """ 税金を納める """

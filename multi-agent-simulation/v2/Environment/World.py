@@ -24,8 +24,7 @@ class World:
         self.immigration_settings = world_setting["immigration"]
 
         self.agent_setting = agent_setting
-        self.hospital_setting = hospital_setting
-
+        self.global_hospital_setting = hospital_setting
         # Worldグラフ（各地域をつなぐ完全グラフ）
         self.node_num = len(self.env_settings)
         self.world_graph = nx.complete_graph(self.node_num)
@@ -49,7 +48,7 @@ class World:
             data["env"] = Environment(
                 infection_model=self.infection_model,
                 agent_setting=self.agent_setting,
-                hospital_setting=self.hospital_setting,
+                global_hospital_setting=self.global_hospital_setting,
                 **env_setting
             )
             agents = data["env"].get_agents()
