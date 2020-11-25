@@ -26,8 +26,8 @@
         "agent_avg_income": 5427,
         "agent_income_range": 0.1,
         "tax_rate": 0.1,
-        "civil_servants_rate": 0.06,
-        "civil_servants_salary": 1000
+        "civil_servants_rate": 0.5,
+        "civil_servants_salary": 500
       }
     },
     {
@@ -42,8 +42,8 @@
         "agent_avg_income": 3227,
         "agent_income_range": 0.1,
         "tax_rate": 0.1,
-        "civil_servants_rate": 0.06,
-        "civil_servants_salary": 1000
+        "civil_servants_rate": 0.5,
+        "civil_servants_salary": 500
       }
     },
     {
@@ -58,8 +58,8 @@
         "agent_avg_income": 3183,
         "agent_income_range": 0.1,
         "tax_rate": 0.1,
-        "civil_servants_rate": 0.06,
-        "civil_servants_salary": 1000
+        "civil_servants_rate": 0.5,
+        "civil_servants_salary": 500
       }
     },
     {
@@ -74,8 +74,8 @@
         "agent_avg_income": 3685,
         "agent_income_range": 0.1,
         "tax_rate": 0.1,
-        "civil_servants_rate": 0.06,
-        "civil_servants_salary": 1000
+        "civil_servants_rate": 0.5,
+        "civil_servants_salary": 500
       }
     },
     {
@@ -90,8 +90,8 @@
         "agent_avg_income": 3067,
         "agent_income_range": 0.1,
         "tax_rate": 0.1,
-        "civil_servants_rate": 0.06,
-        "civil_servants_salary": 1000
+        "civil_servants_rate": 0.5,
+        "civil_servants_salary": 500
       }
     },
     {
@@ -106,8 +106,8 @@
         "agent_avg_income": 2682,
         "agent_income_range": 0.1,
         "tax_rate": 0.1,
-        "civil_servants_rate": 0.06,
-        "civil_servants_salary": 1000
+        "civil_servants_rate": 0.5,
+        "civil_servants_salary": 500
       }
     },
     {
@@ -122,8 +122,8 @@
         "agent_avg_income": 2944,
         "agent_income_range": 0.1,
         "tax_rate": 0.1,
-        "civil_servants_rate": 0.06,
-        "civil_servants_salary": 1000
+        "civil_servants_rate": 0.5,
+        "civil_servants_salary": 500
       }
     },
     {
@@ -138,8 +138,8 @@
         "agent_avg_income": 2873,
         "agent_income_range": 0.1,
         "tax_rate": 0.1,
-        "civil_servants_rate": 0.06,
-        "civil_servants_salary": 1000
+        "civil_servants_rate": 0.5,
+        "civil_servants_salary": 500
       }
     }
   ]
