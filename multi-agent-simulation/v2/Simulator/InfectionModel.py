@@ -5,10 +5,18 @@
 
 class InfectionModel:
     def __init__(
-        self, name, infection_prob, recovery_prob, incubation_period, impact
+        self,
+        name,
+        thresh,
+        infection_prob,
+        recovery_prob,
+        incubation_period,
+        impact,
     ):
         # 感染症名
         self.name = name
+        # 感染症と認知される閾値
+        self.thresh = thresh
         # 感染確率
         self.infection_prob = infection_prob
         # 回復確率

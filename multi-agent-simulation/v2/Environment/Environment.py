@@ -20,6 +20,7 @@ class Environment:
         self,
         infection_model,
         agent_setting,
+        hospital_setting,
         id,
         name,
         population,
@@ -68,6 +69,11 @@ class Environment:
             "agent_income_range"
         ]
 
+        # 病院に隔離中のエージェント情報
+        self.hospital = []
+        # 病院機能を稼働させるかどうか
+        self.can_hospitalized = hospital_setting
+
         self.init_environment()
         self.update_code_list()
 
@@ -105,6 +111,9 @@ class Environment:
         self.finance = self.economy_setting["init_gdp"]
         self.tax_rate = self.economy_setting["tax_rate"]
         self.tmp_tax_revenue = 0
+
+        # 病院を初期化
+        self.hospital = []
 
         logger.info(
             'Enviromnent "{}" を初期化しました。人口:{}, 初期感染者:{}'.format(
@@ -177,13 +186,14 @@ class Environment:
 
     def decide_agents_next_status(self):
         """ エージェントの次ステータスを決定 """
-        for node in self.graph.nodes(data=True):
-            idx, data = node
+        for idx, data in self.graph.nodes(data=True):
             if data["agent"].is_stay_in(self.name):
                 neighbors = []
                 for n in self.graph.neighbors(idx):
                     agent = self.graph.nodes[n]["agent"]
-                    if agent.is_stay_in(self.name):
+                    if agent.is_stay_in(
+                        self.name
+                    ) and not agent.is_hospitalized(self.hospital):
                         neighbors.append(agent)
                 data["agent"].decide_next_status(neighbors)
 
@@ -194,7 +204,11 @@ class Environment:
             if agent.is_stay_in(self.name) and agent.is_tradable:
                 for n in self.graph.neighbors(idx):
                     partner = self.graph.nodes[n]["agent"]
-                    if not partner.is_stay_in(self.name):
+
+                    # 取引相手が他環境に外出中 または 入院中 の場合は取引しない
+                    if not partner.is_stay_in(
+                        self.name
+                    ) or partner.is_hospitalized(self.hospital):
                         continue
 
                     # Step-1. 取引アクションの決定
@@ -229,10 +243,36 @@ class Environment:
 
     def update_agents_status(self):
         """ エージェントの状態を更新 """
-        for node in self.graph.nodes(data=True):
-            _, data = node
-            if data["agent"].is_stay_in(self.name):
-                data["agent"].update_status()
+        for _, data in self.graph.nodes(data=True):
+            agent = data["agent"]
+            if agent.is_stay_in(self.name):
+                agent.update_status()
+
+                # 発症者を病院に隔離する処理
+                if agent.status == Status.INFECTED:
+                    self.admit_to_hospital(agent.code)
+
+                # 回復者を病院から退院させる処理
+                if agent.status == Status.RECOVERED:
+                    self.discharge_to_hospital(agent.code)
+
+    def admit_to_hospital(self, agent_code):
+        """ エージェントを病院に入院させる """
+        if not self.can_hospitalized:
+            # 入院機能が off のとき
+            return
+
+        # 感染症と認知される閾値
+        th = self.infection_model.thresh * self.agent_num
+        # 発症者数が閾値以上の場合、病院による隔離を開始
+        infected_agents = self.count_agent(Status.INFECTED)
+        if infected_agents > th and agent_code not in self.hospital:
+            self.hospital.append(agent_code)
+
+    def discharge_to_hospital(self, agent_code):
+        """ エージェントを病院から退院させる """
+        if agent_code in self.hospital:
+            self.hospital.remove(agent_code)
 
     def pay_tax(self, tax):
         """ 税金を納める """
@@ -268,6 +308,10 @@ class Environment:
 
         targets = [agent for agent in stay_agent if agent.status == status]
         return len(targets)
+
+    def count_patients(self) -> int:
+        """ 患者数を取得 """
+        return len(self.hospital)
 
     def get_average_mental_strength(self) -> float:
         """ 平均メンタル値を取得 """

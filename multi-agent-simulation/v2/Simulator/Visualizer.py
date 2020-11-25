@@ -11,6 +11,46 @@ from loguru import logger
 
 class Visualizer:
     @classmethod
+    def output_seir_chart(
+        cls,
+        path: str,
+        dataframe: pd.DataFrame,
+        env_name: str = None,
+        title: str = None,
+    ):
+        """ SEIR グラフを出力 """
+        filename = os.path.basename(path)
+        logger.info("SEIRグラフ {} を出力しています...".format(filename))
+
+        data = dataframe.copy()
+        if env_name is not None:
+            data = data[data["city"] == env_name]
+
+        seir_data = pd.DataFrame(columns=["day", "count", "type"])
+        for status_type in [
+            "susceptable",
+            "exposed",
+            "infected",
+            "recovered",
+            "death",
+        ]:
+            record = pd.DataFrame(columns=["day", "count", "type"])
+            record["day"] = data["day"]
+            record["count"] = data[status_type]
+            record["type"] = status_type
+            seir_data = pd.concat([seir_data, record], ignore_index=True)
+
+        seir_data = seir_data.astype({"day": int, "count": int, "type": str})
+        sns.lineplot(data=seir_data, x="day", y="count", hue="type")
+
+        if title is not None:
+            plt.title(title)
+        plt.savefig(path)
+        plt.clf()
+
+        logger.info("SEIRグラフ {} を出力しました".format(filename))
+
+    @classmethod
     def output_infected_chart(
         cls,
         path: str,
@@ -43,6 +83,28 @@ class Visualizer:
         plt.savefig(path)
         plt.clf()
         logger.info("感染者推移グラフ {} を出力しました。".format(filename))
+
+    @classmethod
+    def output_patients_chart(
+        cls,
+        path: str,
+        dataframe: pd.DataFrame,
+        title: str = None,
+    ):
+        """ 患者数の推移に関するグラフを出力 """
+        filename = os.path.basename(path)
+        logger.info("患者数推移グラフ {} を出力しています...".format(filename))
+
+        sns.lineplot(
+            data=dataframe, x="day", y="patients", hue="city", ci=None
+        )
+
+        if title is not None:
+            plt.title(title)
+        plt.savefig(path)
+        plt.clf()
+
+        logger.info("患者数推移グラフ {} を出力しました。".format(filename))
 
     @classmethod
     def _sum_exposed_to_infected(cls, data: pd.DataFrame) -> pd.DataFrame:

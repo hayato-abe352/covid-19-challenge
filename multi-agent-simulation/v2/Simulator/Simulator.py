@@ -33,7 +33,10 @@ class Simulator:
     ):
         self.setting = simulation_setting
         self.world = World(
-            InfectionModel(**infection_setting), world_setting, agent_setting
+            InfectionModel(**infection_setting),
+            world_setting,
+            agent_setting,
+            simulation_setting["hospital"],
         )
 
         self.recorder = Recorder()
@@ -115,6 +118,8 @@ class Simulator:
         self.output_finance_chart()
         self.output_tax_revenue_chart()
         self.output_income_chart()
+        self.output_patients_chart()
+        self.output_seir_charts()
 
     def save_record(self, episode: int, day: int, env: Environment):
         """ Recorder にデータを記録 """
@@ -124,6 +129,7 @@ class Simulator:
         finance = self._get_finance(env)
         tax_revenue = self._get_tax_revenue(env)
         average_income = self._get_average_income(env)
+        patients = self._get_patients_count(env)
         seird = self._get_seird_counts(env)
         self.recorder.add_record(
             episode,
@@ -134,6 +140,7 @@ class Simulator:
             finance,
             tax_revenue,
             average_income,
+            patients,
             *seird,
         )
 
@@ -169,6 +176,10 @@ class Simulator:
         r = env.count_agent(Status.RECOVERED)
         d = env.count_agent(Status.DEATH)
         return s, e, i, r, d
+
+    def _get_patients_count(self, env: Environment) -> int:
+        """ 患者数を取得 """
+        return env.count_patients()
 
     def _get_average_mental_strength(self, env: Environment) -> float:
         """ 平均メンタル値を取得 """
@@ -303,9 +314,26 @@ class Simulator:
         title = "average of income"
         Visualizer.output_income_chart(path, data, title=title)
 
-    def output_seir_charts_each_city(self):
+    def output_patients_chart(self):
+        """ 患者数の推移グラフを出力 """
+        data = self.recorder.get_dataframe()
+
+        path = "output/images/patients.png"
+        title = "patitens count"
+        Visualizer.output_patients_chart(path, data, title=title)
+
+    def output_seir_charts(self):
         """ 各都市におけるSEIRチャートを出力 """
-        pass
+        data = self.recorder.get_dataframe()
+        envs = [e.name for e in self.world.get_environments()] + [None]
+        for env in envs:
+            path = "output/images/seir_{}.png".format(
+                env if env is not None else "all"
+            )
+            title = "SEIR-chart in {}".format(
+                env if env is not None else "total"
+            )
+            Visualizer.output_seir_chart(path, data, env_name=env, title=title)
 
     def output_aggregated_seir_chart_each_city(
         self, title: str = None, method: str = "mean"

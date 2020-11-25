@@ -2,5 +2,6 @@
   "episode": 3,
   "days": 90,
   "wake_up": 30,
-  "wake_up_visualize": false
+  "wake_up_visualize": false,
+  "hospital": true
 }

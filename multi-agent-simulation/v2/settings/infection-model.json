@@ -1,5 +1,6 @@
 {
   "name": "covid-19",
+  "thresh": 0.01,
   "infection_prob": 0.05,
   "recovery_prob": 0.05,
   "incubation_period": 3,

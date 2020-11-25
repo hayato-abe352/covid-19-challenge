@@ -95,6 +95,10 @@ class Agent:
         """ 取引可能かどうか """
         return self.status not in [Status.INFECTED, Status.DEATH]
 
+    def is_hospitalized(self, hospital) -> bool:
+        """ 入院中かどうか """
+        return self.code in hospital
+
     def is_stay_in(self, env_name) -> bool:
         """ このエージェントの所在が env_name の環境かどうか """
         return env_name == self.current_location

@@ -14,7 +14,9 @@ from Environment.Environment import Environment
 
 
 class World:
-    def __init__(self, infection_model, world_setting, agent_setting):
+    def __init__(
+        self, infection_model, world_setting, agent_setting, hospital_setting
+    ):
         self.infection_model = infection_model
         self.flow_rate = world_setting["flow_rate"]
         self.travel_days = world_setting["travel_days"]
@@ -22,6 +24,7 @@ class World:
         self.immigration_settings = world_setting["immigration"]
 
         self.agent_setting = agent_setting
+        self.hospital_setting = hospital_setting
 
         # Worldグラフ（各地域をつなぐ完全グラフ）
         self.node_num = len(self.env_settings)
@@ -46,6 +49,7 @@ class World:
             data["env"] = Environment(
                 infection_model=self.infection_model,
                 agent_setting=self.agent_setting,
+                hospital_setting=self.hospital_setting,
                 **env_setting
             )
             agents = data["env"].get_agents()
@@ -73,9 +77,12 @@ class World:
     def move_agent(self):
         """ エージェントの Environment 間移動 """
         self.travelers = []
+        all_patients = []
 
         # 流出処理（滞在期間がゼロになったエージェントを帰還させる）
         for env in self.get_environments():
+            all_patients.extend(env.hospital)
+
             # 滞在日数がゼロになった旅行者を抽出
             outflow_agents = [
                 data["agent"]
@@ -83,6 +90,7 @@ class World:
                 if data["agent"].is_stay_in(env.name)
                 and data["agent"].is_living
                 and data["agent"].is_traveler
+                and not data["agent"].is_hospitalized(env.hospital)
                 and data["agent"].stay_period == 0
             ]
             # 帰還可能かを判断（出国審査）
@@ -102,6 +110,7 @@ class World:
             if agent.is_living
             and not agent.is_traveler
             and random.random() <= self.flow_rate
+            and not agent.is_hospitalized(all_patients)
         ]
 
         # 流出可能なエージェントのみを抽出（出国審査処理）

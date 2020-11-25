@@ -22,6 +22,7 @@ class Recorder:
                 "recovered",
                 "death",
                 "total",
+                "patients",
             ]
         )
         self.dataframe = self.dataframe.astype(
@@ -40,6 +41,7 @@ class Recorder:
                 "recovered": int,
                 "death": int,
                 "total": int,
+                "patients": int,
             }
         )
 
@@ -53,6 +55,7 @@ class Recorder:
         finance: float,
         tax_revenue: float,
         avg_income: float,
+        patients: int,
         s: int,
         e: int,
         i: int,
@@ -76,6 +79,7 @@ class Recorder:
             "death": d,
             "living": s + e + i + r,
             "total": s + e + i + r + d,
+            "patients": patients
         }
         self.dataframe = self.dataframe.append(data, ignore_index=True)
 
