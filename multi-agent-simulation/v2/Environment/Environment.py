@@ -83,6 +83,8 @@ class Environment:
         self.hospital_capacity_buffer = 0
         # 病院の稼働コスト (入院患者一人あたりでコストが発生)
         self.hospital_operating_cost = economy["hospital_operating_cost"]
+        # 病院の稼働コスト (空き病床数に対してコストが発生)
+        self.hospital_keeping_cost = economy["hospital_operating_cost"] / 2
 
         self.init_environment()
         self.update_code_list()
@@ -296,10 +298,12 @@ class Environment:
         self.hospital_capacity_buffer += amount
 
     def consume_hospital_operating_cost(self):
-        """ 病院を稼働させる (入院患者数の運営費を消費させる) """
-        patient_num = len(self.hospital)
+        """ 病院を稼働させる (入院患者数の運営費 と 病床確保の運営費 を消費させる) """
+        patient_num = self.count_patients()
+        capacity = self.hospital_capacity + self.hospital_capacity_buffer
         operating_cost = patient_num * self.hospital_operating_cost
-        self.finance = self.finance - operating_cost
+        keeping_cost = (capacity - patient_num) * self.hospital_keeping_cost
+        self.finance = self.finance - (operating_cost + keeping_cost)
 
     def pay_tax(self, tax):
         """ 税金を納める """
