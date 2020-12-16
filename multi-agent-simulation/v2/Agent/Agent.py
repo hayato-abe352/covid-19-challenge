@@ -185,8 +185,16 @@ class Agent:
             )
             prob = 1 - ((1 - infection_prob) ** len(infecteds))
             if random.random() <= prob:
-                self.next_status = Status.EXPOSED
-                self.incubation_count = self.infection_model.incubation_period
+                incubation_period = self.infection_model.incubation_period
+                if incubation_period != 0:
+                    # 潜伏期間が設定されている場合
+                    self.next_status = Status.EXPOSED
+                    self.incubation_count = (
+                        self.infection_model.incubation_period
+                    )
+                else:
+                    # 潜伏期間が設定されていない場合(ゼロの場合) => 即時発症
+                    self.next_status = Status.INFECTED
 
         # EXPOSED
         if self.status == Status.EXPOSED:
