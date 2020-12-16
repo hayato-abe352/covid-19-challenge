@@ -6,13 +6,14 @@ from __future__ import annotations
 
 import copy
 import json
-import datetime
+import os
+import uuid
+from enum import Enum
+
 import numpy as np
 from loguru import logger
 
-from enum import Enum
-
-MODEL_OUTPUT_PATH = "output/models/ql-model-{timestamp}.json"
+MODEL_OUTPUT_PATH = "output/models/ql-model-{model_id}-{episode}.json"
 
 
 class Government:
@@ -48,7 +49,7 @@ class Government:
         self.economy_score = {
             "normal": 0,
             "recession": -1000,
-            "crisis": -10000
+            "crisis": -10000,
         }
 
     def reset_government(self):
@@ -271,6 +272,7 @@ class QLearningAgent:
 
     def __init__(
         self,
+        init_q_table_path=None,
         alpha=0.2,
         ganma=0.99,
         epsilon=0.1,
@@ -300,21 +302,37 @@ class QLearningAgent:
         self.previous_action = None
 
         # Q-Table
-        self.q_values = self._init_q_values()
+        if init_q_table_path is None:
+            model_id = uuid.uuid4().hex
+            self.q_values = self._init_q_values(model_id)
+        else:
+            self.q_values = self._load_q_values(init_q_table_path)
+        self.model_id = self.q_values["model_id"]
 
         logger.info(
             "Q-Learning Agent クラスを初期化しました。"
-            "alpha={}, ganma={}, epsilon={}".format(
-                self.alpha, self.ganma, self.epsilon
+            "model-id={}, alpha={}, ganma={}, epsilon={}".format(
+                self.model_id,
+                self.alpha,
+                self.ganma,
+                self.epsilon,
             )
         )
 
-    def _init_q_values(self):
+    def _init_q_values(self, model_id):
         """ Q-Table の初期化 """
         q_values = {}
         q_values["generation"] = 0
+        q_values["episode_count"] = 0
+        q_values["model_id"] = model_id
         q_values[self.state] = np.repeat(0.0, len(self.actions)).tolist()
         return q_values
+
+    def _load_q_values(self, path):
+        """ 既存の Q-Table を読込 """
+        with open(path, mode="r") as f:
+            q_values = json.load(f)
+            return q_values
 
     def act(self):
         """ 行動を決定 """
@@ -345,6 +363,14 @@ class QLearningAgent:
             self.reward_history.append(reward)
             self.learn(reward)
 
+    def count_up_episode(self):
+        """ モデル内に記録している経験済みエピソード数カウントを +1 する """
+        self.q_values["episode_count"] += 1
+
+    def get_episode_count(self):
+        """ モデル内に記録している経験済みエピソード数を取得 """
+        return self.q_values["episode_count"]
+
     def learn(self, reward):
         """ Q-value の更新 """
         # Q(s,a)
@@ -361,9 +387,13 @@ class QLearningAgent:
 
     def output_q_table(self):
         """ Q-Table の json 出力 """
-        logger.info("Q-Table を出力します。")
-        timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-        path = MODEL_OUTPUT_PATH.format(timestamp=timestamp)
+        episode = self.q_values["episode_count"]
+        path = MODEL_OUTPUT_PATH.format(
+            model_id=self.model_id, episode=episode
+        )
+        filename = os.path.basename(path)
+
+        logger.info("Q-Table {} を出力します。".format(filename))
         with open(path, mode="w") as f:
             json.dump(self.q_values, f, indent=4)
-        logger.info("Q-Table を出力しました。")
+        logger.info("Q-Table {} を出力しました。".format(filename))

@@ -1,7 +1,8 @@
 {
-  "episode": 20,
+  "episode": 5,
   "days": 90,
   "wake_up": 30,
   "wake_up_visualize": true,
-  "global_hospital_opetaring_setting": true
+  "global_hospital_opetaring_setting": true,
+  "q_table_auto_save_iteration": 2
 }

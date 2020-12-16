@@ -52,6 +52,10 @@ class Recorder:
             {"episode": int, "avg_score": float}
         )
 
+    def load_q_score_csv(self, path):
+        """ Q-Score を記録した csv ファイルを読み込む """
+        self.q_score = pd.read_csv(path)
+
     def add_record(
         self,
         episode: int,

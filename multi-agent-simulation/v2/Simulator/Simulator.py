@@ -31,6 +31,8 @@ class Simulator:
         world_setting: dict,
         agent_setting: dict,
         infection_setting: dict,
+        q_table_path: str = None,
+        q_score_csv: str = None,
     ):
         self.setting = simulation_setting
         self.world = World(
@@ -46,7 +48,12 @@ class Simulator:
         tokyo = self.world.get_environment("tokyo")
         self.government = Government(tokyo)
         # Q-Learning Agent クラス
-        self.ql_agent = QLearningAgent()
+        self.ql_agent = QLearningAgent(init_q_table_path=q_table_path)
+
+        # Q-Score 記録用 csv を指定された場合は、csv ファイルをロード
+        self.q_score_csv = q_score_csv
+        if q_score_csv is not None:
+            self.recorder.load_q_score_csv(q_score_csv)
 
     def run(self):
         """ シミュレーションを実行 """
@@ -131,16 +138,30 @@ class Simulator:
                         ql_status = env_status
                         ql_action = action
 
+            # Q-Leaning モデルの経験済みエピソード数を +1
+            self.ql_agent.count_up_episode()
+
+            # Q-スコアの平均値を記録
+            ql_episode = self.ql_agent.get_episode_count()
+            avg_q_score = sum(ql_rewards) / len(ql_rewards)
+            self.recorder.save_q_score(ql_episode, avg_q_score)
+
+            # Q-Learning モデルの記録
+            iteration = self.setting["q_table_auto_save_iteration"]
+            if iteration != 0 and (episode + 1) % iteration == 0:
+                self.ql_agent.output_q_table()
+                self.output_q_score_csv()
+
+            # この episode での最終 SEIRD 数, Q-Learning 報酬数を出力
             self.print_agent_status_count()
             self.print_ql_reward(ql_rewards)
 
-            # Q-スコアの平均値を記録
-            avg_q_score = sum(ql_rewards) / len(ql_rewards)
-            self.recorder.save_q_score(episode, avg_q_score)
-
-        # 結果出力
+        # Q-Learning 結果出力
         self.ql_agent.output_q_table()
-        self.output_q_score()
+        self.output_q_score_csv()
+        self.output_q_score_chart()
+
+        # シミュレーター結果出力
         self.output_results()
 
     def one_epoch(self, is_waking_up=False):
@@ -305,6 +326,22 @@ class Simulator:
         data.to_csv(path, index=False)
         logger.info("シミュレーション結果 {} を出力しました。".format(filename))
 
+    def output_q_score_csv(self):
+        """ Q-Score (.csv) ファイルを出力 """
+        data = self.recorder.get_q_score()
+
+        output_path = self.q_score_csv
+        if output_path is None:
+            model_id = self.ql_agent.model_id
+            output_path = "output/models/q-score-{}.csv".format(model_id)
+
+        filename = os.path.basename(output_path)
+        logger.info("Q-Score {} を出力しています...".format(filename))
+        data.to_csv(output_path, index=False)
+        logger.info("Q-Score {} を出力しました。".format(filename))
+
+        pass
+
     def output_world_graph(self):
         """ World のネットワーク図を出力 """
         pass
@@ -420,7 +457,7 @@ class Simulator:
         """ アニメーションを出力 """
         pass
 
-    def output_q_score(self):
+    def output_q_score_chart(self):
         """ Q-スコアの推移を出力 """
         data = self.recorder.get_q_score()
         path = "output/images/q-score.png"
