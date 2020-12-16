@@ -3,6 +3,7 @@
   "thresh": 0.01,
   "infection_prob": 0.05,
   "recovery_prob": 0.05,
+  "recovery_prob_in_hospital": 0.1,
   "incubation_period": 3,
   "impact": {
     "max_damage": 1.5,

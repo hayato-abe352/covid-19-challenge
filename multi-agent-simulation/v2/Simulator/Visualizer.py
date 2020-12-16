@@ -251,3 +251,16 @@ class Visualizer:
         plt.clf()
 
         logger.info("平均所得の推移グラフ {} を出力しました".format(filename))
+
+    @classmethod
+    def output_q_score(self, path: str, dataframe: pd.DataFrame):
+        """ Q-スコアを出力 """
+        filename = os.path.basename(path)
+        logger.info("Q-スコアの推移グラフ {} を出力しています...".format(filename))
+
+        sns.lineplot(data=dataframe, x="episode", y="avg_score")
+        plt.title("Q-Score")
+        plt.savefig(path)
+        plt.clf()
+
+        logger.info("Q-スコアの推移グラフ {} を出力しました。".format(filename))

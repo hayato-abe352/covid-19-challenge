@@ -22,7 +22,7 @@
       "attach": 6,
       "init_infection": 3,
       "hospital": true,
-      "hospital_bed_num": 120,
+      "hospital_capacity": 120,
       "economy": {
         "init_gdp": 7580000,
         "agent_avg_income": 5427,
@@ -41,7 +41,7 @@
       "attach": 6,
       "init_infection": 0,
       "hospital": true,
-      "hospital_bed_num": 80,
+      "hospital_capacity": 80,
       "economy": {
         "init_gdp": 2525000,
         "agent_avg_income": 3227,
@@ -60,7 +60,7 @@
       "attach": 6,
       "init_infection": 0,
       "hospital": true,
-      "hospital_bed_num": 80,
+      "hospital_capacity": 80,
       "economy": {
         "init_gdp": 2811000,
         "agent_avg_income": 3183,
@@ -79,7 +79,7 @@
       "attach": 6,
       "init_infection": 0,
       "hospital": true,
-      "hospital_bed_num": 50,
+      "hospital_capacity": 50,
       "economy": {
         "init_gdp": 2870000,
         "agent_avg_income": 3685,
@@ -98,7 +98,7 @@
       "attach": 6,
       "init_infection": 0,
       "hospital": true,
-      "hospital_bed_num": 50,
+      "hospital_capacity": 50,
       "economy": {
         "init_gdp": 1661000,
         "agent_avg_income": 3067,
@@ -117,7 +117,7 @@
       "attach": 4,
       "init_infection": 0,
       "hospital": true,
-      "hospital_bed_num": 10,
+      "hospital_capacity": 10,
       "economy": {
         "init_gdp": 1376000,
         "agent_avg_income": 2682,
@@ -136,7 +136,7 @@
       "attach": 4,
       "init_infection": 0,
       "hospital": true,
-      "hospital_bed_num": 10,
+      "hospital_capacity": 10,
       "economy": {
         "init_gdp": 676000,
         "agent_avg_income": 2944,
@@ -155,7 +155,7 @@
       "attach": 4,
       "init_infection": 0,
       "hospital": true,
-      "hospital_bed_num": 10,
+      "hospital_capacity": 10,
       "economy": {
         "init_gdp": 639000,
         "agent_avg_income": 2873,

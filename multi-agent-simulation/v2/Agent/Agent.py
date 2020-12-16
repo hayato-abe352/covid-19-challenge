@@ -21,6 +21,7 @@ class Agent:
         hometown: str,
         status: Status,
         infection_model: InfectionModel,
+        mask_effect: float = 1.0,
     ):
         # エージェントの設定
         self.agent_setting = agent_setting
@@ -44,8 +45,13 @@ class Agent:
         self.status: Status = status
         self.next_status: Status = None
 
+        # 入院しているか
+        self.is_hospitalized = False
+
         # 感染症モデル
         self.infection_model = infection_model
+        # マスクによる予防効果
+        self.mask_effect = mask_effect
 
         # 潜伏日数（発症までの残り日数）
         self.incubation_count = 0
@@ -95,10 +101,6 @@ class Agent:
         """ 取引可能かどうか """
         return self.status not in [Status.INFECTED, Status.DEATH]
 
-    def is_hospitalized(self, hospital) -> bool:
-        """ 入院中かどうか """
-        return self.code in hospital
-
     def is_stay_in(self, env_name) -> bool:
         """ このエージェントの所在が env_name の環境かどうか """
         return env_name == self.current_location
@@ -106,6 +108,10 @@ class Agent:
     def belong_to(self, env_name) -> bool:
         """　このエージェントが env_name に所属しているかどうか　(公務員の所属確認) """
         return env_name == self.hometown
+
+    def set_mask_effect(self, value):
+        """ マスクを付ける (マスクによる削減効果値を変更) """
+        self.mask_effect = value
 
     def go_back_hometown(self):
         """ エージェントの所在地を故郷に戻す """
@@ -174,9 +180,10 @@ class Agent:
                 for agent in neighbors
                 if agent.status in [Status.EXPOSED, Status.INFECTED]
             ]
-            prob = 1 - (
-                (1 - self.infection_model.infection_prob) ** len(infecteds)
+            infection_prob = (
+                self.infection_model.infection_prob * self.mask_effect
             )
+            prob = 1 - ((1 - infection_prob) ** len(infecteds))
             if random.random() <= prob:
                 self.next_status = Status.EXPOSED
                 self.incubation_count = self.infection_model.incubation_period
@@ -190,7 +197,11 @@ class Agent:
 
         # INFECTED
         if self.status == Status.INFECTED:
-            if random.random() <= self.infection_model.recovery_prob:
+            recov_prob = self.infection_model.recovery_prob
+            if self.is_hospitalized:
+                recov_prob = self.infection_model.recovery_prob_in_hospital
+
+            if random.random() <= recov_prob:
                 self.next_status = Status.RECOVERED
 
     def decide_trade_action(self) -> str:

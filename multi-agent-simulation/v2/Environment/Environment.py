@@ -28,7 +28,7 @@ class Environment:
         attach,
         init_infection,
         hospital,
-        hospital_bed_num,
+        hospital_capacity,
         economy,
     ):
         self.id = id
@@ -58,6 +58,8 @@ class Environment:
         self.economy_setting = economy
         # 経済力
         self.finance = economy["init_gdp"]
+        # 経済力の評価基準値
+        self.finance_baseline = economy["init_gdp"]
         # 税率
         self.tax_rate = economy["tax_rate"]
         # 一日の税収
@@ -76,7 +78,9 @@ class Environment:
         # 病院機能を稼働させるかどうか
         self.can_hospitalized = hospital and global_hospital_setting
         # 病院の病床数
-        self.hospital_bed_num = hospital_bed_num
+        self.hospital_capacity = hospital_capacity
+        # 病院病床数の増加分
+        self.hospital_capacity_buffer = 0
         # 病院の稼働コスト (入院患者一人あたりでコストが発生)
         self.hospital_operating_cost = economy["hospital_operating_cost"]
 
@@ -120,6 +124,7 @@ class Environment:
 
         # 病院を初期化
         self.hospital = []
+        self.hospital_capacity_buffer = 0
 
         logger.info(
             'Enviromnent "{}" を初期化しました。人口:{}, 初期感染者:{}'.format(
@@ -197,9 +202,10 @@ class Environment:
                 neighbors = []
                 for n in self.graph.neighbors(idx):
                     agent = self.graph.nodes[n]["agent"]
-                    if agent.is_stay_in(
-                        self.name
-                    ) and not agent.is_hospitalized(self.hospital):
+                    if (
+                        agent.is_stay_in(self.name)
+                        and not agent.is_hospitalized
+                    ):
                         neighbors.append(agent)
                 data["agent"].decide_next_status(neighbors)
 
@@ -212,9 +218,10 @@ class Environment:
                     partner = self.graph.nodes[n]["agent"]
 
                     # 取引相手が他環境に外出中 または 入院中 の場合は取引しない
-                    if not partner.is_stay_in(
-                        self.name
-                    ) or partner.is_hospitalized(self.hospital):
+                    if (
+                        not partner.is_stay_in(self.name)
+                        or partner.is_hospitalized
+                    ):
                         continue
 
                     # Step-1. 取引アクションの決定
@@ -256,16 +263,17 @@ class Environment:
 
                 # 発症者を病院に隔離する処理
                 if agent.status == Status.INFECTED:
-                    self.admit_to_hospital(agent.code)
+                    self.admit_to_hospital(agent)
 
                 # 回復者を病院から退院させる処理
                 if agent.status == Status.RECOVERED:
-                    self.discharge_to_hospital(agent.code)
+                    self.discharge_from_hospital(agent)
 
-    def admit_to_hospital(self, agent_code):
+    def admit_to_hospital(self, agent):
         """ エージェントを病院に入院させる """
         patient_num = len(self.hospital)
-        if not self.can_hospitalized or patient_num > self.hospital_bed_num:
+        capacity = self.hospital_capacity + self.hospital_capacity_buffer
+        if not self.can_hospitalized or patient_num > capacity:
             # 入院機能が off のとき または 病床が埋まっているとき
             return
 
@@ -273,13 +281,19 @@ class Environment:
         th = self.infection_model.thresh * self.agent_num
         # 発症者数が閾値以上の場合、病院による隔離を開始
         infected_agents = self.count_agent(Status.INFECTED)
-        if infected_agents > th and agent_code not in self.hospital:
-            self.hospital.append(agent_code)
+        if infected_agents > th and agent.code not in self.hospital:
+            self.hospital.append(agent.code)
+            agent.is_hospitalized = True
 
-    def discharge_to_hospital(self, agent_code):
+    def discharge_from_hospital(self, agent):
         """ エージェントを病院から退院させる """
-        if agent_code in self.hospital:
-            self.hospital.remove(agent_code)
+        if agent.code in self.hospital:
+            self.hospital.remove(agent.code)
+            agent.is_hospitalized = False
+
+    def change_hospital_capacity(self, amount):
+        """ 病床数を変更 """
+        self.hospital_capacity_buffer += amount
 
     def consume_hospital_operating_cost(self):
         """ 病院を稼働させる (入院患者数の運営費を消費させる) """
@@ -326,6 +340,19 @@ class Environment:
         """ 患者数を取得 """
         return len(self.hospital)
 
+    def set_finance_baseline(self):
+        """ 経済力の評価基準値をセット """
+        # このメソッド実行時点の finance 値を判断基準に設定する
+        self.finance_baseline = self.finance
+
+    def get_finance(self) -> float:
+        """ 経済力を取得 """
+        return self.finance
+
+    def get_finance_baseline(self) -> float:
+        """ 経済力の判断基準値を取得 """
+        return self.finance_baseline
+
     def get_average_mental_strength(self) -> float:
         """ 平均メンタル値を取得 """
         values = [
@@ -334,10 +361,6 @@ class Environment:
             if data["agent"].is_stay_in(self.name)
         ]
         return sum(values) / len(values)
-
-    def get_finance(self) -> float:
-        """ 経済力を取得 """
-        return self.finance
 
     def get_tax_revenue(self) -> float:
         """ 税収を取得 """
@@ -359,6 +382,12 @@ class Environment:
     def get_agents(self) -> List[Agent]:
         """ Agent のリストを取得 """
         return [node[1]["agent"] for node in self.graph.nodes(data=True)]
+
+    def get_hospital_occupancy(self) -> float:
+        """ 病床の占有率を取得 """
+        capacity = self.hospital_capacity + self.hospital_capacity_buffer
+        patients = self.count_patients()
+        return patients / capacity
 
     def get_snap_shot(self) -> pd.DataFrame:
         """ 現時点のスナップショットを取得 """

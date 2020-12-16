@@ -89,7 +89,7 @@ class World:
                 if data["agent"].is_stay_in(env.name)
                 and data["agent"].is_living
                 and data["agent"].is_traveler
-                and not data["agent"].is_hospitalized(env.hospital)
+                and not data["agent"].is_hospitalized
                 and data["agent"].stay_period == 0
             ]
             # 帰還可能かを判断（出国審査）
@@ -109,7 +109,7 @@ class World:
             if agent.is_living
             and not agent.is_traveler
             and random.random() <= self.flow_rate
-            and not agent.is_hospitalized(all_patients)
+            and not agent.is_hospitalized
         ]
 
         # 流出可能なエージェントのみを抽出（出国審査処理）

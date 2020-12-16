@@ -15,6 +15,7 @@ from tqdm import tqdm
 from Agent.Status import Status
 from Environment.World import World
 from Environment.Environment import Environment
+from Environment.Government import Government, QLearningAgent, QLearningAction
 from Simulator.InfectionModel import InfectionModel
 from Simulator.Recorder import Recorder
 from Simulator.Visualizer import Visualizer
@@ -41,6 +42,12 @@ class Simulator:
 
         self.recorder = Recorder()
 
+        # Q-Learning Operation クラス
+        tokyo = self.world.get_environment("tokyo")
+        self.government = Government(tokyo)
+        # Q-Learning Agent クラス
+        self.ql_agent = QLearningAgent()
+
     def run(self):
         """ シミュレーションを実行 """
         self.clear_output_dirs()
@@ -55,8 +62,16 @@ class Simulator:
                 )
             )
             self.world.reset_environments()
+            self.government.reset_government()
+
+            # Government クラスが意思決定・政策実行を行う周期
+            period = self.government.period
 
             days = self.setting["days"] + self.setting["wake_up"]
+            tokyo = self.world.get_environment("tokyo")
+            ql_status = None
+            ql_action = None
+            ql_rewards = []
             with tqdm(range(days)) as pbar:
                 for day in pbar:
                     is_waking_up = day < self.setting["wake_up"]
@@ -74,9 +89,58 @@ class Simulator:
                         record_day = (day - self.setting["wake_up"]) + 1
                         for env in self.world.get_environments():
                             self.save_record(episode, record_day, env)
+
+                    if is_waking_up:
+                        continue
+
+                    # 感染シミュレート開始時点の経済力を判定基準値に設定
+                    if day == self.setting["wake_up"]:
+                        for env in self.world.get_environments():
+                            env.set_finance_baseline()
+
+                    # Government クラスへの状況報告
+                    infected = tokyo.count_agent(Status.INFECTED)
+                    death = tokyo.count_agent(Status.DEATH)
+                    self.government.save_data(infected, death)
+
+                    # Government クラスによる意思決定
+                    if day % period == 0:
+                        # 状況把握
+                        env_status = self.government.determine_state()
+
+                        # 過去に実行した政策に対して、現在の状態を踏まえて評価する
+                        if ql_action is not None and ql_status is not None:
+                            # 報酬を計算
+                            if ql_action == QLearningAction.IMPOSSIBLE:
+                                reward = self.government.get_impossible_score()
+                            else:
+                                reward = self.government.compute_reward()
+                            ql_rewards.append(reward)
+                            # Q-Learning Agent の観測と学習
+                            self.ql_agent.observe(env_status, reward)
+
+                        # アクションを決定
+                        action = self.ql_agent.act()
+                        if self.government.is_possible_action(action):
+                            # アクションが実行可能な場合 => 政策実行
+                            self.government.apply_action(action)
+                        else:
+                            # アクションが実行不可能の場合
+                            action = QLearningAction.IMPOSSIBLE
+
+                        ql_status = env_status
+                        ql_action = action
+
             self.print_agent_status_count()
+            self.print_ql_reward(ql_rewards)
+
+            # Q-スコアの平均値を記録
+            avg_q_score = sum(ql_rewards) / len(ql_rewards)
+            self.recorder.save_q_score(episode, avg_q_score)
 
         # 結果出力
+        self.ql_agent.output_q_table()
+        self.output_q_score()
         self.output_results()
 
     def one_epoch(self, is_waking_up=False):
@@ -168,6 +232,14 @@ class Simulator:
                     (living / total) * 100,
                 )
             )
+
+    def print_ql_reward(self, ql_reward):
+        """ Q-Learning の報酬情報をログに出力 """
+        logger.info(
+            "Q-LEARNING REWARDS: total={:.2f}, avg={:.2f}".format(
+                sum(ql_reward), sum(ql_reward) / len(ql_reward)
+            )
+        )
 
     def _get_seird_counts(
         self, env: Environment
@@ -347,3 +419,9 @@ class Simulator:
     def output_animation(self):
         """ アニメーションを出力 """
         pass
+
+    def output_q_score(self):
+        """ Q-スコアの推移を出力 """
+        data = self.recorder.get_q_score()
+        path = "output/images/q-score.png"
+        Visualizer.output_q_score(path, data)
