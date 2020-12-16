@@ -28,7 +28,7 @@ class Government:
         # 死亡者数
         self.death_data = []
         # 観測周期
-        self.period = 3
+        self.period = 5
 
         # 感染拡大アラート (一度感染が広がると True になるフラグ)
         self.alert = False
@@ -43,7 +43,7 @@ class Government:
         self.convergence_thresh = 0.95
 
         # スコア基準値
-        self.impossible_action_score = -500
+        self.impossible_action_score = -1000
         self.infected_score = -100
         self.death_score = -1000
         self.economy_score = {
@@ -84,7 +84,8 @@ class Government:
         infection_s = self._decide_infection_status()
         hospital_s = self._decide_hospital_status()
         economy_s = self._decide_economy_status()
-        return (infection_s, hospital_s, economy_s)
+        mask_dist_s = self._decide_mask_distribution_status()
+        return (infection_s, hospital_s, economy_s, mask_dist_s)
 
     def _decide_infection_status(self):
         """ 感染拡大のステータスを決定 """
@@ -147,30 +148,37 @@ class Government:
 
         return QLearningEconomyStatus.CRISIS
 
-    def apply_action(self, action: QLearningAction):
+    def _decide_mask_distribution_status(self):
+        """ マスクの配布状態を決定 """
+        executed = self.execution_status["abe_no_mask"]
+        if executed:
+            return QLearningMaskDistributionStatus.DISTRIBUTED
+        return QLearningMaskDistributionStatus.UNDISTRIBUTED
+
+    def apply_action(self, action: int):
         """ 政策 (アクション) を適用 """
-        if action == QLearningAction.NOP:
+        if action == QLearningAction.NOP.value:
             # 何もしない
             return
 
-        if action == QLearningAction.UP_HOSPITAL_CAPACITY:
+        if action == QLearningAction.UP_HOSPITAL_CAPACITY.value:
             # 病院のキャパシティを +10
             self.env.change_hospital_capacity(+10)
 
-        if action == QLearningAction.DOWN_HOSPITAL_CAPACITY:
+        if action == QLearningAction.DOWN_HOSPITAL_CAPACITY.value:
             # 病院のキャパシティを -10
             self.env.change_hospital_capacity(-10)
 
-        if action == QLearningAction.ABE_NO_MASK:
+        if action == QLearningAction.ABE_NO_MASK.value:
             # 感染確率を半減
             for agent in self.env.get_agents():
                 agent.set_mask_effect(0.5)
             # 実施状況を記録（アベノマスク政策は episode 中に１回のみ発動可能）
             self.execution_status["abe_no_mask"] = True
 
-    def is_possible_action(self, action: QLearningAction):
+    def is_possible_action(self, action: int):
         """ 政策 (アクション) が実行可能かを判定 """
-        if action == QLearningAction.ABE_NO_MASK:
+        if action == QLearningAction.ABE_NO_MASK.value:
             # 未実行であれば実行可能
             executed = self.execution_status["abe_no_mask"]
             return not executed
@@ -199,6 +207,14 @@ class Government:
 
         score = i_score + d_score + ec_score
         return score
+
+    def get_executable_acts(self):
+        """ 実行可能なアクションの一覧を取得 """
+        results = []
+        for act in QLearningAction:
+            if self.is_possible_action(act.value):
+                results.append(act.value)
+        return results
 
     def get_impossible_score(self):
         """ アクションが実行付加だった場合のスコアを取得 """
@@ -265,6 +281,17 @@ class QLearningEconomyStatus(Enum):
     CRISIS = 2
 
 
+class QLearningMaskDistributionStatus(Enum):
+    """
+    Q-Learning Mask Distribution Status
+    """
+
+    # 未配布
+    UNDISTRIBUTED = 0
+    # 配布済み
+    DISTRIBUTED = 1
+
+
 class QLearningAgent:
     """
     Q-Learning Agent class
@@ -311,7 +338,7 @@ class QLearningAgent:
 
         logger.info(
             "Q-Learning Agent クラスを初期化しました。"
-            "model-id={}, alpha={}, ganma={}, epsilon={}".format(
+            "model={}, alpha={}, ganma={}, epsilon={}".format(
                 self.model_id,
                 self.alpha,
                 self.ganma,
@@ -334,15 +361,25 @@ class QLearningAgent:
             q_values = json.load(f)
             return q_values
 
-    def act(self):
+    def act(self, executables, order=1) -> int:
         """ 行動を決定 """
+        act_list = self.q_values[self.state]
+        if order > len(act_list):
+            # 全てのアクションが実行不可能な場合 => ランダムなアクションを返す
+            return np.random.randint(0, len(act_list))
+
         # ε-greedy
         if np.random.uniform() < self.epsilon:
             # random
-            action = np.random.randint(0, len(self.q_values[self.state]))
+            action = np.random.randint(0, len(act_list))
         else:
             # greedy
-            action = np.argmax(self.q_values[self.state])
+            action = int(np.where(act_list == np.sort(act_list)[-order])[0][0])
+
+        # 実行不可能なアクションを選択した場合 => Q値が次点で高いアクションを再帰的に選択
+        if action not in executables:
+            next_order = order + 1
+            action = self.act(executables, next_order)
 
         self.previous_action = action
         return action
@@ -393,7 +430,7 @@ class QLearningAgent:
         )
         filename = os.path.basename(path)
 
-        logger.info("Q-Table {} を出力します。".format(filename))
+        logger.info("Q-Table {} を出力しています...".format(filename))
         with open(path, mode="w") as f:
             json.dump(self.q_values, f, indent=4)
         logger.info("Q-Table {} を出力しました。".format(filename))

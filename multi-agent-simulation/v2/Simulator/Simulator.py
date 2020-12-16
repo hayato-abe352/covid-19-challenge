@@ -48,7 +48,11 @@ class Simulator:
         tokyo = self.world.get_environment("tokyo")
         self.government = Government(tokyo)
         # Q-Learning Agent クラス
-        self.ql_agent = QLearningAgent(init_q_table_path=q_table_path)
+        init_status = self.government.determine_state()
+        self.ql_agent = QLearningAgent(
+            init_q_table_path=q_table_path,
+            observation=".".join([s.name for s in init_status]),
+        )
 
         # Q-Score 記録用 csv を指定された場合は、csv ファイルをロード
         self.q_score_csv = q_score_csv
@@ -73,6 +77,10 @@ class Simulator:
 
             # Government クラスが意思決定・政策実行を行う周期
             period = self.government.period
+
+            # 初期の観測状態をセット
+            init_status = self.government.determine_state()
+            self.ql_agent.observe(init_status)
 
             days = self.setting["days"] + self.setting["wake_up"]
             tokyo = self.world.get_environment("tokyo")
@@ -112,13 +120,13 @@ class Simulator:
 
                     # Government クラスによる意思決定
                     if day % period == 0:
-                        # 状況把握
+                        # 現在の状況把握
                         env_status = self.government.determine_state()
 
                         # 過去に実行した政策に対して、現在の状態を踏まえて評価する
                         if ql_action is not None and ql_status is not None:
                             # 報酬を計算
-                            if ql_action == QLearningAction.IMPOSSIBLE:
+                            if ql_action == QLearningAction.IMPOSSIBLE.value:
                                 reward = self.government.get_impossible_score()
                             else:
                                 reward = self.government.compute_reward()
@@ -126,14 +134,17 @@ class Simulator:
                             # Q-Learning Agent の観測と学習
                             self.ql_agent.observe(env_status, reward)
 
+                        # 実行可能なアクションの一覧を取得
+                        executable_acts = self.government.get_executable_acts()
+
                         # アクションを決定
-                        action = self.ql_agent.act()
+                        action = self.ql_agent.act(executable_acts)
                         if self.government.is_possible_action(action):
                             # アクションが実行可能な場合 => 政策実行
                             self.government.apply_action(action)
                         else:
                             # アクションが実行不可能の場合
-                            action = QLearningAction.IMPOSSIBLE
+                            action = QLearningAction.IMPOSSIBLE.value
 
                         ql_status = env_status
                         ql_action = action
@@ -172,7 +183,7 @@ class Simulator:
         # エージェントの環境間移動
         self.world.move_agent()
 
-        # 感染シミュレート
+        # 経済活動・感染シミュレート
         environments = self.world.get_environments()
         for env in environments:
             # 公務員エージェントに給料を支給
