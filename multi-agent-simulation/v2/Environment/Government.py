@@ -43,7 +43,7 @@ class Government:
         self.convergence_thresh = 0.95
 
         # スコア基準値
-        self.impossible_action_score = -1000
+        self.impossible_action_score = -99999
         self.infected_score = -100
         self.death_score = -1000
         self.economy_score = {
@@ -140,10 +140,10 @@ class Government:
         baseline = self.env.get_finance_baseline()
         rate = finance / baseline
 
-        if rate > 0.9:
+        if rate > 0.75:
             return QLearningEconomyStatus.NORMAL
 
-        if rate > 0.6:
+        if rate > 0.5:
             return QLearningEconomyStatus.RECESSION
 
         return QLearningEconomyStatus.CRISIS
@@ -413,6 +413,7 @@ class QLearningAgent:
         # Q(s,a)
         q = self.q_values[self.previous_state][self.previous_action]
         # maxQ(s')
+        # FIXME: （バグ）マスク配布不可能な場合で必ず 0.0 になる問題
         max_q = max(self.q_values[self.state])
         # Q(s,a) <- Q(s,a) + alpha * (r + ganma * maxQ(s') - Q(s,a))
         self.q_values[self.previous_state][self.previous_action] = q + (

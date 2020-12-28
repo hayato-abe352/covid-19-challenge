@@ -44,6 +44,11 @@ class Simulator:
 
         self.recorder = Recorder()
 
+        # 感染シミュレーション用のデータを記録するか
+        self.simulation_recording = self.setting["simulation_recording"]
+        # 機械学習を行うか
+        self.q_learning = self.setting["q_learning"]
+
         # Q-Learning Operation クラス
         tokyo = self.world.get_environment("tokyo")
         self.government = Government(tokyo)
@@ -100,12 +105,15 @@ class Simulator:
                     self.one_epoch(is_waking_up=is_waking_up)
 
                     # データを記録
-                    if self.setting["wake_up_visualize"] or (not is_waking_up):
+                    if self.simulation_recording and (
+                        self.setting["wake_up_visualize"] or (not is_waking_up)
+                    ):
                         record_day = (day - self.setting["wake_up"]) + 1
                         for env in self.world.get_environments():
                             self.save_record(episode, record_day, env)
 
-                    if is_waking_up:
+                    # ウェイクアップ中 または Q学習を行わない場合
+                    if is_waking_up or not self.q_learning:
                         continue
 
                     # 感染シミュレート開始時点の経済力を判定基準値に設定
@@ -149,31 +157,37 @@ class Simulator:
                         ql_status = env_status
                         ql_action = action
 
-            # Q-Leaning モデルの経験済みエピソード数を +1
-            self.ql_agent.count_up_episode()
+            if self.q_learning:
+                # Q-Leaning モデルの経験済みエピソード数を +1
+                self.ql_agent.count_up_episode()
 
-            # Q-スコアの平均値を記録
-            ql_episode = self.ql_agent.get_episode_count()
-            avg_q_score = sum(ql_rewards) / len(ql_rewards)
-            self.recorder.save_q_score(ql_episode, avg_q_score)
+                # Q-スコアの平均値を記録
+                ql_episode = self.ql_agent.get_episode_count()
+                avg_q_score = sum(ql_rewards) / len(ql_rewards)
+                self.recorder.save_q_score(ql_episode, avg_q_score)
 
-            # Q-Learning モデルの記録
-            iteration = self.setting["q_table_auto_save_iteration"]
-            if iteration != 0 and (episode + 1) % iteration == 0:
-                self.ql_agent.output_q_table()
-                self.output_q_score_csv()
+                # Q-Learning モデルの記録
+                iteration = self.setting["q_table_auto_save_iteration"]
+                if iteration != 0 and (episode + 1) % iteration == 0:
+                    self.ql_agent.output_q_table()
+                    self.output_q_score_csv()
+                    self.output_q_score_chart()
 
-            # この episode での最終 SEIRD 数, Q-Learning 報酬数を出力
+                # この episode での Q-Learning 報酬数を出力
+                self.print_ql_reward(ql_rewards)
+
+            # この episode での最終 SEIRD 数を出力
             self.print_agent_status_count()
-            self.print_ql_reward(ql_rewards)
 
         # Q-Learning 結果出力
-        self.ql_agent.output_q_table()
-        self.output_q_score_csv()
-        self.output_q_score_chart()
+        if self.q_learning:
+            self.ql_agent.output_q_table()
+            self.output_q_score_csv()
+            self.output_q_score_chart()
 
         # シミュレーター結果出力
-        self.output_results()
+        if self.simulation_recording:
+            self.output_results()
 
     def one_epoch(self, is_waking_up=False):
         """ 1回のエポックを実行 """

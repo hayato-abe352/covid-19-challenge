@@ -1,8 +1,10 @@
 {
-  "episode": 5,
+  "simulation_recording": true,
+  "q_learning": false,
+  "episode": 10,
   "days": 90,
   "wake_up": 30,
   "wake_up_visualize": true,
   "global_hospital_opetaring_setting": true,
-  "q_table_auto_save_iteration": 2
+  "q_table_auto_save_iteration": 10
 }
