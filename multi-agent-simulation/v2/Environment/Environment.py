@@ -391,6 +391,8 @@ class Environment:
         """ 病床の占有率を取得 """
         capacity = self.hospital_capacity + self.hospital_capacity_buffer
         patients = self.count_patients()
+        if capacity == 0:
+            return 0
         return patients / capacity
 
     def get_snap_shot(self) -> pd.DataFrame:
