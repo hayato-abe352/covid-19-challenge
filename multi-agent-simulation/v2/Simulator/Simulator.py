@@ -66,6 +66,11 @@ class Simulator:
 
     def run(self):
         """ シミュレーションを実行 """
+        logger.info(
+            "シミュレーションを開始します。episode={}".format(self.setting["episode"])
+        )
+
+        # 出力先ディレクトリをクリア
         self.clear_output_dirs()
 
         # シミュレーションを実行
@@ -142,11 +147,8 @@ class Simulator:
                             # Q-Learning Agent の観測と学習
                             self.ql_agent.observe(env_status, reward)
 
-                        # 実行可能なアクションの一覧を取得
-                        executable_acts = self.government.get_executable_acts()
-
                         # アクションを決定
-                        action = self.ql_agent.act(executable_acts)
+                        action = self.ql_agent.act()
                         if self.government.is_possible_action(action):
                             # アクションが実行可能な場合 => 政策実行
                             self.government.apply_action(action)
@@ -188,6 +190,8 @@ class Simulator:
         # シミュレーター結果出力
         if self.simulation_recording:
             self.output_results()
+
+        logger.info("シミュレーションが完了しました。")
 
     def one_epoch(self, is_waking_up=False):
         """ 1回のエポックを実行 """

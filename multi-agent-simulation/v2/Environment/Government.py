@@ -43,13 +43,13 @@ class Government:
         self.convergence_thresh = 0.95
 
         # スコア基準値
-        self.impossible_action_score = -99999
-        self.infected_score = -100
-        self.death_score = -1000
+        self.impossible_action_score = -100000
+        self.infected_score = -10
+        self.death_score = -100
         self.economy_score = {
             "normal": 0,
-            "recession": -1000,
-            "crisis": -10000,
+            "recession": -100,
+            "crisis": -1000,
         }
 
     def reset_government(self):
@@ -208,14 +208,6 @@ class Government:
         score = i_score + d_score + ec_score
         return score
 
-    def get_executable_acts(self):
-        """ 実行可能なアクションの一覧を取得 """
-        results = []
-        for act in QLearningAction:
-            if self.is_possible_action(act.value):
-                results.append(act.value)
-        return results
-
     def get_impossible_score(self):
         """ アクションが実行付加だった場合のスコアを取得 """
         return self.impossible_action_score
@@ -361,25 +353,15 @@ class QLearningAgent:
             q_values = json.load(f)
             return q_values
 
-    def act(self, executables, order=1) -> int:
+    def act(self):
         """ 行動を決定 """
-        act_list = self.q_values[self.state]
-        if order > len(act_list):
-            # 全てのアクションが実行不可能な場合 => ランダムなアクションを返す
-            return np.random.randint(0, len(act_list))
-
         # ε-greedy
         if np.random.uniform() < self.epsilon:
             # random
-            action = np.random.randint(0, len(act_list))
+            action = np.random.randint(0, len(self.q_values[self.state]))
         else:
             # greedy
-            action = int(np.where(act_list == np.sort(act_list)[-order])[0][0])
-
-        # 実行不可能なアクションを選択した場合 => Q値が次点で高いアクションを再帰的に選択
-        if action not in executables:
-            next_order = order + 1
-            action = self.act(executables, next_order)
+            action = np.argmax(self.q_values[self.state])
 
         self.previous_action = action
         return action

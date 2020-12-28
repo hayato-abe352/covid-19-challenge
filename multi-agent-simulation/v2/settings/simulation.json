@@ -1,7 +1,7 @@
 {
-  "simulation_recording": true,
-  "q_learning": false,
-  "episode": 10,
+  "simulation_recording": false,
+  "q_learning": true,
+  "episode": 100,
   "days": 90,
   "wake_up": 30,
   "wake_up_visualize": true,
