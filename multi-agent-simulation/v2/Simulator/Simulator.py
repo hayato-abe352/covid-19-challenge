@@ -171,7 +171,7 @@ class Simulator:
                                 else:
                                     reward = self.government.compute_reward()
                                 ql_rewards.append(reward)
-                            # Q-Learning Agent の観測と学習
+                            # Q-Learning Agent の観測
                             self.ql_agent.observe(env_status, reward)
 
                         # アクションを決定
@@ -187,11 +187,18 @@ class Simulator:
                         ql_action = action
 
             if self.q_learning and not is_q_testing:
+                logger.info("Experience Replay を実行します。")
+                # Experience Replay による機械学習
+                self.ql_agent.learn()
                 # Q-Leaning モデルの経験済みエピソード数を +1
                 self.ql_agent.count_up_episode()
+                ql_episode = self.ql_agent.get_episode_count()
+                logger.info(
+                    "Experience Replay を実行しました。"
+                    "更新後のエピソードカウント:{}".format(ql_episode)
+                )
 
                 # Q-スコアの平均値を記録
-                ql_episode = self.ql_agent.get_episode_count()
                 avg_q_score = sum(ql_rewards) / len(ql_rewards)
                 self.recorder.save_q_score(ql_episode, avg_q_score)
 

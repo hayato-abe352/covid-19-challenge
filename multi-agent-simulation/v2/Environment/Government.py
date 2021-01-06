@@ -7,6 +7,7 @@ from __future__ import annotations
 import copy
 import json
 import os
+import random
 import uuid
 from enum import Enum
 
@@ -27,7 +28,7 @@ class Government:
             "exposed": [],
             "infected": [],
             "recovered": [],
-            "death": []
+            "death": [],
         }
         # 過去の状態を判定するためのデータ
         self.past_data = {
@@ -35,7 +36,7 @@ class Government:
             "exposed": [],
             "infected": [],
             "recovered": [],
-            "death": []
+            "death": [],
         }
         # 観測周期
         self.period = 5
@@ -48,20 +49,20 @@ class Government:
         self.init_execution_status()
 
         # 状態判定の閾値
-        self.explosion_thresh = 1.2
-        self.spread_thresh = 1.05
-        self.convergence_thresh = 0.95
+        self.explosion_thresh = 1.3
+        self.spread_thresh = 1.1
+        self.convergence_thresh = 0.9
 
         # スコア基準値
         self.impossible_action_score = -10000
-        self.susceptable_score = 50
-        self.exposed_score = 0
-        self.infected_score = 0
-        self.recovered_score = 50
+        self.susceptable_score = 10
+        self.exposed_score = -10
+        self.infected_score = -20
+        self.recovered_score = 10
         self.death_score = -100
         self.economy_score = {
-            "normal": 200,
-            "recession": 100,
+            "normal": 100,
+            "recession": 50,
             "crisis": 0,
         }
 
@@ -72,14 +73,14 @@ class Government:
             "exposed": [],
             "infected": [],
             "recovered": [],
-            "death": []
+            "death": [],
         }
         self.past_data = {
             "susceptable": [],
             "exposed": [],
             "infected": [],
             "recovered": [],
-            "death": []
+            "death": [],
         }
         self.init_execution_status()
         self.alert = False
@@ -92,6 +93,7 @@ class Government:
 
     def save_data(self, s, e, i, r, d):
         """ 感染者数を記録 """
+
         def _append(data, target):
             self.current_data[target].append(data)
             if len(self.current_data[target]) > self.period:
@@ -200,9 +202,10 @@ class Government:
             self.env.change_hospital_capacity(-10)
 
         if action == QLearningAction.ABE_NO_MASK.value:
-            # 感染確率を半減
-            for agent in self.env.get_agents():
-                agent.set_mask_effect(0.5)
+            if not self.execution_status["abe_no_mask"]:
+                # まだアベノマスク政策を実行していない場合 => 感染確率を半減
+                for agent in self.env.get_agents():
+                    agent.set_mask_effect(0.5)
             # 実施状況を記録（アベノマスク政策は episode 中に１回のみ発動可能）
             self.execution_status["abe_no_mask"] = True
 
@@ -216,6 +219,7 @@ class Government:
 
     def compute_reward(self):
         """ 報酬を計算 """
+
         def _average(values):
             if len(values) == 0:
                 return 0
@@ -338,7 +342,7 @@ class QLearningAgent:
         init_q_table_path=None,
         alpha=0.2,
         ganma=0.99,
-        epsilon=0.1,
+        epsilon=0.25,
         observation=None,
     ):
         # 学習率 (0.0 ~ 1.0)
@@ -363,6 +367,9 @@ class QLearningAgent:
         self.init_state = str(observation)
         self.previous_state = None
         self.previous_action = None
+
+        # Experience Replay 用のメモリ
+        self.experience_memory = []
 
         # Q-Table
         if init_q_table_path is None:
@@ -424,7 +431,27 @@ class QLearningAgent:
 
         if reward is not None:
             self.reward_history.append(reward)
-            self.learn(reward)
+            self.stock_memory(reward)
+
+    def stock_memory(self, reward):
+        """ Experience Memory に経験値を記録 """
+        experience = {
+            "previous_state": self.previous_state,
+            "previous_action": self.previous_action,
+            "state": self.state,
+            "reward": reward,
+        }
+        self.experience_memory.append(experience)
+
+    def load_memory(self, shuffle=True):
+        """ Experience Memory から経験値をロード """
+        if shuffle:
+            random.shuffle(self.experience_memory)
+        return self.experience_memory
+
+    def clear_memory(self):
+        """ Experience Memory をクリア """
+        self.experience_memory = []
 
     def count_up_episode(self):
         """ モデル内に記録している経験済みエピソード数カウントを +1 する """
@@ -434,15 +461,31 @@ class QLearningAgent:
         """ モデル内に記録している経験済みエピソード数を取得 """
         return self.q_values["episode_count"]
 
-    def learn(self, reward):
-        """ Q-value の更新 """
+    def learn(self):
+        """ Experience Replay による機械学習 """
+        experiences = self.load_memory()
+        for experience in experiences:
+            previous_state = experience["previous_state"]
+            previous_action = experience["previous_action"]
+            state = experience["state"]
+            reward = experience["reward"]
+
+            # Q-Table の更新
+            self._update_q_table(
+                previous_state, previous_action, state, reward
+            )
+
+        # Experience Memory をクリア
+        self.clear_memory()
+
+    def _update_q_table(self, p_state, p_action, state, reward):
+        """ Q-Table を更新 """
         # Q(s,a)
-        q = self.q_values[self.previous_state][self.previous_action]
+        q = self.q_values[p_state][p_action]
         # maxQ(s')
-        # FIXME: （バグ）マスク配布不可能な場合で必ず 0.0 になる問題
-        max_q = max(self.q_values[self.state])
+        max_q = max(self.q_values[state])
         # Q(s,a) <- Q(s,a) + alpha * (r + ganma * maxQ(s') - Q(s,a))
-        self.q_values[self.previous_state][self.previous_action] = q + (
+        self.q_values[p_state][p_action] = q + (
             self.alpha * (reward + (self.ganma * max_q) - q)
         )
 
