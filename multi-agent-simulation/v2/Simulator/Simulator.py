@@ -148,9 +148,8 @@ class Simulator:
                             env.set_finance_baseline()
 
                     # Government クラスへの状況報告
-                    infected = tokyo.count_agent(Status.INFECTED)
-                    death = tokyo.count_agent(Status.DEATH)
-                    self.government.save_data(infected, death)
+                    seird = self._get_seird_counts(tokyo)
+                    self.government.save_data(*seird)
 
                     # Government クラスによる意思決定
                     if day % period == 0:

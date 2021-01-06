@@ -22,11 +22,21 @@ class Government:
         self.env = env
 
         # 現在の状態を判定するためのデータ
-        self.current_data = []
+        self.current_data = {
+            "susceptable": [],
+            "exposed": [],
+            "infected": [],
+            "recovered": [],
+            "death": []
+        }
         # 過去の状態を判定するためのデータ
-        self.past_data = []
-        # 死亡者数
-        self.death_data = []
+        self.past_data = {
+            "susceptable": [],
+            "exposed": [],
+            "infected": [],
+            "recovered": [],
+            "death": []
+        }
         # 観測周期
         self.period = 5
 
@@ -43,20 +53,34 @@ class Government:
         self.convergence_thresh = 0.95
 
         # スコア基準値
-        self.impossible_action_score = -100000
-        self.infected_score = -10
+        self.impossible_action_score = -10000
+        self.susceptable_score = 50
+        self.exposed_score = 0
+        self.infected_score = 0
+        self.recovered_score = 50
         self.death_score = -100
         self.economy_score = {
-            "normal": 0,
-            "recession": -100,
-            "crisis": -1000,
+            "normal": 200,
+            "recession": 100,
+            "crisis": 0,
         }
 
     def reset_government(self):
         """ Government クラスの管理状態を初期化 """
-        self.current_data = []
-        self.past_data = []
-        self.death_data = []
+        self.current_data = {
+            "susceptable": [],
+            "exposed": [],
+            "infected": [],
+            "recovered": [],
+            "death": []
+        }
+        self.past_data = {
+            "susceptable": [],
+            "exposed": [],
+            "infected": [],
+            "recovered": [],
+            "death": []
+        }
         self.init_execution_status()
         self.alert = False
         logger.info("Government クラスを初期化しました。")
@@ -66,18 +90,21 @@ class Government:
         init_exe_status = {"abe_no_mask": False}
         self.execution_status = init_exe_status
 
-    def save_data(self, infected_num, death_num):
+    def save_data(self, s, e, i, r, d):
         """ 感染者数を記録 """
-        self.current_data.append(infected_num)
-        if len(self.current_data) > self.period:
-            self.past_data.append(self.current_data[0])
-            self.current_data.pop(0)
-        if len(self.past_data) > self.period:
-            self.past_data.pop(0)
+        def _append(data, target):
+            self.current_data[target].append(data)
+            if len(self.current_data[target]) > self.period:
+                self.past_data[target].append(self.current_data[target][0])
+                self.current_data[target].pop(0)
+            if len(self.past_data[target]) > self.period:
+                self.past_data[target].pop(0)
 
-        self.death_data.append(death_num)
-        if len(self.death_data) > self.period:
-            self.death_data.pop(0)
+        _append(s, "susceptable")
+        _append(e, "exposed")
+        _append(i, "infected")
+        _append(r, "recovered")
+        _append(d, "death")
 
     def determine_state(self):
         """ 現在の状態を観測 """
@@ -89,11 +116,14 @@ class Government:
 
     def _decide_infection_status(self):
         """ 感染拡大のステータスを決定 """
-        if not self.past_data or not self.current_data:
+        past_i = self.past_data["infected"]
+        current_i = self.current_data["infected"]
+
+        if not past_i or not current_i:
             return QLearningInfectionStatus.BEFORE_PANDEMIC
 
-        past_avg = sum(self.past_data) / len(self.past_data)
-        current_avg = sum(self.current_data) / len(self.current_data)
+        past_avg = sum(past_i) / len(past_i)
+        current_avg = sum(current_i) / len(current_i)
 
         # 感染症と認知される閾値を算出
         population = self.env.agent_num
@@ -186,16 +216,30 @@ class Government:
 
     def compute_reward(self):
         """ 報酬を計算 """
-        if not self.current_data or not self.death_data:
-            return 0
+        def _average(values):
+            if len(values) == 0:
+                return 0
+            return sum(values) / len(values)
 
-        # 感染者数によるスコア計算
-        avg_infected = sum(self.current_data) / len(self.current_data)
-        i_score = avg_infected * self.infected_score
+        # susceptable によるスコア計算
+        current_s = self.current_data["susceptable"]
+        s_score = _average(current_s) * self.susceptable_score
 
-        # 死亡者数によるスコア計算
-        avg_death = sum(self.death_data) / len(self.death_data)
-        d_score = avg_death * self.death_score
+        # exposed によるスコア計算
+        current_e = self.current_data["exposed"]
+        e_score = _average(current_e) * self.exposed_score
+
+        # infected によるスコア計算
+        current_i = self.current_data["infected"]
+        i_score = _average(current_i) * self.infected_score
+
+        # recovered によるスコア計算
+        current_r = self.current_data["recovered"]
+        r_score = _average(current_r) * self.recovered_score
+
+        # death によるスコア計算
+        current_d = self.current_data["death"]
+        d_score = _average(current_d) * self.death_score
 
         # 経済状態によるスコア計算
         economy_status = self._decide_economy_status()
@@ -205,7 +249,7 @@ class Government:
         elif economy_status == QLearningEconomyStatus.CRISIS:
             ec_score = self.economy_score["crisis"]
 
-        score = i_score + d_score + ec_score
+        score = sum([s_score, e_score, i_score, r_score, d_score, ec_score])
         return score
 
     def get_impossible_score(self):
