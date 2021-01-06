@@ -49,6 +49,8 @@ class Simulator:
         # 機械学習を行うか
         self.q_learning = self.setting["q_learning"]
 
+        # Q-table のパス
+        self.q_table_path = q_table_path
         # Q-Learning Operation クラス
         tokyo = self.world.get_environment("tokyo")
         self.government = Government(tokyo)
@@ -64,14 +66,33 @@ class Simulator:
         if q_score_csv is not None:
             self.recorder.load_q_score_csv(q_score_csv)
 
-    def run(self):
-        """ シミュレーションを実行 """
-        logger.info(
-            "シミュレーションを開始します。episode={}".format(self.setting["episode"])
-        )
-
         # 出力先ディレクトリをクリア
         self.clear_output_dirs()
+
+    def run_with_q_model(self):
+        """ Q-Learning による最適行動をシミュレート """
+        # テスト時は常に最適行動を選択する
+        init_status = self.government.determine_state()
+        self.ql_agent = QLearningAgent(
+            init_q_table_path=self.q_table_path,
+            epsilon=0.0,
+            observation=".".join([s.name for s in init_status]),
+        )
+
+        # 最適行動選択ありでシミュレート
+        self.run(is_q_testing=True)
+
+    def run(self, is_q_testing=False):
+        """ シミュレーションを実行 """
+        logger.info(
+            "シミュレーションを開始します。"
+            "episode={}, シミュレーション結果出力={}, Q-Learning={}, Q-Testing={}".format(
+                self.setting["episode"],
+                self.simulation_recording,
+                self.q_learning,
+                is_q_testing,
+            )
+        )
 
         # シミュレーションを実行
         for episode in range(self.setting["episode"]):
@@ -138,12 +159,19 @@ class Simulator:
 
                         # 過去に実行した政策に対して、現在の状態を踏まえて評価する
                         if ql_action is not None and ql_status is not None:
-                            # 報酬を計算
-                            if ql_action == QLearningAction.IMPOSSIBLE.value:
-                                reward = self.government.get_impossible_score()
-                            else:
-                                reward = self.government.compute_reward()
-                            ql_rewards.append(reward)
+                            reward = None
+                            if not is_q_testing:
+                                # 報酬を計算
+                                if (
+                                    ql_action
+                                    == QLearningAction.IMPOSSIBLE.value
+                                ):
+                                    reward = (
+                                        self.government.get_impossible_score()
+                                    )
+                                else:
+                                    reward = self.government.compute_reward()
+                                ql_rewards.append(reward)
                             # Q-Learning Agent の観測と学習
                             self.ql_agent.observe(env_status, reward)
 
@@ -159,7 +187,7 @@ class Simulator:
                         ql_status = env_status
                         ql_action = action
 
-            if self.q_learning:
+            if self.q_learning and not is_q_testing:
                 # Q-Leaning モデルの経験済みエピソード数を +1
                 self.ql_agent.count_up_episode()
 
@@ -182,7 +210,7 @@ class Simulator:
             self.print_agent_status_count()
 
         # Q-Learning 結果出力
-        if self.q_learning:
+        if self.q_learning and not is_q_testing:
             self.ql_agent.output_q_table()
             self.output_q_score_csv()
             self.output_q_score_chart()
@@ -489,5 +517,6 @@ class Simulator:
     def output_q_score_chart(self):
         """ Q-スコアの推移を出力 """
         data = self.recorder.get_q_score()
-        path = "output/images/q-score.png"
+        model_id = self.ql_agent.model_id
+        path = "output/models/q-score-{}.png".format(model_id)
         Visualizer.output_q_score(path, data)
