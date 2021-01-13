@@ -54,16 +54,24 @@ class Government:
         self.convergence_thresh = 0.9
 
         # スコア基準値
-        self.impossible_action_score = -10000
-        self.susceptable_score = 10
-        self.exposed_score = -10
-        self.infected_score = -20
-        self.recovered_score = 10
-        self.death_score = -100
+        self.impossible_action_score = -1000
+        self.infection_score = {
+            "BEFORE_PANDEMIC": 100,
+            "PHASE1": -500,  # 感染拡大期
+            "PHASE2": -1000,  # 感染爆発期
+            "PHASE3": -50,  # 蔓延期
+            "CONVERGENCE": 0,
+            "AFTER_PANDEMIC": 100,
+        }
+        self.hospital_score = {
+            "NORMAL": 100,
+            "TIGHT": -100,
+            "VERY_TIGHT": -500,
+        }
         self.economy_score = {
-            "normal": 100,
-            "recession": 50,
-            "crisis": 0,
+            "NORMAL": 100,
+            "RECESSION": -100,
+            "CRISIS": -500,
         }
 
     def reset_government(self):
@@ -132,7 +140,7 @@ class Government:
         rate = self.env.infection_model.thresh
         thresh = int(population * rate)
 
-        # 昨日・今日ともに感染症と認知されていない場合
+        # 前期・今期ともに感染症と認知されていない場合
         if past_avg < thresh and current_avg < thresh:
             if not self.alert:
                 # 感染拡大前の平常状態
@@ -146,23 +154,25 @@ class Government:
 
         # 感染者が急激に増加傾向の場合 => 感染爆発
         if self.explosion_thresh < increase_rate:
-            return QLearningInfectionStatus.EXPLOSION
+            return QLearningInfectionStatus.PHASE2
 
         # 感染者が増加傾向の場合 => 感染拡大
         if self.spread_thresh < increase_rate:
-            return QLearningInfectionStatus.SPREAD
+            return QLearningInfectionStatus.PHASE1
 
         # 感染者が減少傾向の場合 => 感染収束
         if increase_rate < self.convergence_thresh:
             return QLearningInfectionStatus.CONVERGENCE
 
         # 感染者の増加傾向が緩やかな場合 => 蔓延
-        return QLearningInfectionStatus.PANDEMIC
+        return QLearningInfectionStatus.PHASE3
 
     def _decide_hospital_status(self):
         """ 病院ステータスを決定 """
         hospital_occupancy = self.env.get_hospital_occupancy()
         if hospital_occupancy >= 0.8:
+            return QLearningHospitalStatus.VERY_TIGHT
+        if hospital_occupancy >= 0.6:
             return QLearningHospitalStatus.TIGHT
         return QLearningHospitalStatus.NORMAL
 
@@ -217,43 +227,21 @@ class Government:
             return not executed
         return True
 
-    def compute_reward(self):
+    def compute_reward(self, status):
         """ 報酬を計算 """
+        # 感染状況スコア計算
+        infection_status = status[0]
+        i_score = self.infection_score[infection_status.name]
 
-        def _average(values):
-            if len(values) == 0:
-                return 0
-            return sum(values) / len(values)
-
-        # susceptable によるスコア計算
-        current_s = self.current_data["susceptable"]
-        s_score = _average(current_s) * self.susceptable_score
-
-        # exposed によるスコア計算
-        current_e = self.current_data["exposed"]
-        e_score = _average(current_e) * self.exposed_score
-
-        # infected によるスコア計算
-        current_i = self.current_data["infected"]
-        i_score = _average(current_i) * self.infected_score
-
-        # recovered によるスコア計算
-        current_r = self.current_data["recovered"]
-        r_score = _average(current_r) * self.recovered_score
-
-        # death によるスコア計算
-        current_d = self.current_data["death"]
-        d_score = _average(current_d) * self.death_score
+        # 病院稼働スコア計算
+        hospital_status = status[1]
+        h_score = self.hospital_score[hospital_status.name]
 
         # 経済状態によるスコア計算
-        economy_status = self._decide_economy_status()
-        ec_score = self.economy_score["normal"]
-        if economy_status == QLearningEconomyStatus.RECESSION:
-            ec_score = self.economy_score["recession"]
-        elif economy_status == QLearningEconomyStatus.CRISIS:
-            ec_score = self.economy_score["crisis"]
+        economy_status = status[2]
+        e_score = self.economy_score[economy_status.name]
 
-        score = sum([s_score, e_score, i_score, r_score, d_score, ec_score])
+        score = i_score + h_score + e_score
         return score
 
     def get_impossible_score(self):
@@ -286,11 +274,11 @@ class QLearningInfectionStatus(Enum):
     # 感染拡大前
     BEFORE_PANDEMIC = 0
     # 感染拡大
-    SPREAD = 1
+    PHASE1 = 1
     # 感染爆発
-    EXPLOSION = 2
+    PHASE2 = 2
     # 蔓延
-    PANDEMIC = 3
+    PHASE3 = 3
     # 感染収束
     CONVERGENCE = 4
     # 感染拡大後
@@ -306,6 +294,8 @@ class QLearningHospitalStatus(Enum):
     NORMAL = 0
     # 病床逼迫
     TIGHT = 1
+    # 病床逼迫
+    VERY_TIGHT = 2
 
 
 class QLearningEconomyStatus(Enum):
@@ -342,7 +332,7 @@ class QLearningAgent:
         init_q_table_path=None,
         alpha=0.2,
         ganma=0.99,
-        epsilon=0.25,
+        epsilon=0.1,
         observation=None,
     ):
         # 学習率 (0.0 ~ 1.0)
@@ -408,8 +398,12 @@ class QLearningAgent:
         """ 行動を決定 """
         # ε-greedy
         if np.random.uniform() < self.epsilon:
-            # random
-            action = np.random.randint(0, len(self.q_values[self.state]))
+            # random (greedy 以外の選択肢からランダムに選択)
+            greedy = np.argmax(self.q_values[self.state])
+            targets = [
+                i for i in range(len(self.q_values[self.state])) if i != greedy
+            ]
+            action = random.choice(targets)
         else:
             # greedy
             action = np.argmax(self.q_values[self.state])
@@ -463,7 +457,7 @@ class QLearningAgent:
 
     def learn(self):
         """ Experience Replay による機械学習 """
-        experiences = self.load_memory()
+        experiences = self.load_memory(shuffle=False)
         for experience in experiences:
             previous_state = experience["previous_state"]
             previous_action = experience["previous_action"]

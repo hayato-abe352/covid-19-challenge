@@ -169,7 +169,9 @@ class Simulator:
                                         self.government.get_impossible_score()
                                     )
                                 else:
-                                    reward = self.government.compute_reward()
+                                    reward = self.government.compute_reward(
+                                        env_status
+                                    )
                                 ql_rewards.append(reward)
                             # Q-Learning Agent の観測
                             self.ql_agent.observe(env_status, reward)

@@ -2,7 +2,7 @@
   "simulation_recording": false,
   "q_learning": true,
   "episode": 100,
-  "days": 90,
+  "days": 120,
   "wake_up": 30,
   "wake_up_visualize": true,
   "global_hospital_opetaring_setting": true,
