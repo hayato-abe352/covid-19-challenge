@@ -7,6 +7,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from loguru import logger
+from graphviz import Digraph
 
 
 class Visualizer:
@@ -253,7 +254,7 @@ class Visualizer:
         logger.info("平均所得の推移グラフ {} を出力しました".format(filename))
 
     @classmethod
-    def output_q_score(self, path: str, dataframe: pd.DataFrame):
+    def output_q_score(cls, path: str, dataframe: pd.DataFrame):
         """ Q-スコアを出力 """
         filename = os.path.basename(path)
         logger.info("Q-スコアの推移グラフ {} を出力しています...".format(filename))
@@ -264,3 +265,17 @@ class Visualizer:
         plt.clf()
 
         logger.info("Q-スコアの推移グラフ {} を出力しました。".format(filename))
+
+    @classmethod
+    def output_q_history(cls, path: str, dataframe: pd.DataFrame):
+        """ 状態変化図を出力 """
+        output_path, ext = os.path.splitext(path)
+        G = Digraph(format=ext.replace(".", ""))
+        G.attr("node", shape="square", style="filled")
+        for _, row in dataframe.iterrows():
+            before = row["prev_state"]
+            after = row["next_state"]
+            label = "{}/{:.1%}".format(row["action"], row["transition_prob"])
+            G.edge(before, after, label=label)
+        G.node("start", shape="circle", color="pink")
+        G.render(output_path)

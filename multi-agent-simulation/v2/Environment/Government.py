@@ -57,11 +57,11 @@ class Government:
         self.impossible_action_score = -1000
         self.infection_score = {
             "BEFORE_PANDEMIC": 100,
-            "PHASE1": -500,  # 感染拡大期
+            "PHASE1": -200,  # 感染拡大期
             "PHASE2": -1000,  # 感染爆発期
             "PHASE3": -50,  # 蔓延期
             "CONVERGENCE": 0,
-            "AFTER_PANDEMIC": 100,
+            "AFTER_PANDEMIC": 0,
         }
         self.hospital_score = {
             "NORMAL": 100,

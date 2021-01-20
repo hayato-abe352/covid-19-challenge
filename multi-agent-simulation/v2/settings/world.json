@@ -22,7 +22,7 @@
       "attach": 6,
       "init_infection": 3,
       "hospital": true,
-      "hospital_capacity": 50,
+      "hospital_capacity": 100,
       "economy": {
         "init_gdp": 7580000,
         "agent_avg_income": 5427,

@@ -138,8 +138,8 @@ class Simulator:
                         for env in self.world.get_environments():
                             self.save_record(episode, record_day, env)
 
-                    # ウェイクアップ中 または Q学習を行わない場合
-                    if is_waking_up or not self.q_learning:
+                    # ウェイクアップ中の場合
+                    if is_waking_up:
                         continue
 
                     # 感染シミュレート開始時点の経済力を判定基準値に設定
@@ -153,8 +153,16 @@ class Simulator:
 
                     # Government クラスによる意思決定
                     if day % period == 0:
-                        # 現在の状況把握
+                        # 現在の状態を判定し記録
                         env_status = self.government.determine_state()
+                        record_day = (day - self.setting["wake_up"]) + 1
+                        self.recorder.save_q_state(
+                            episode, record_day, env_status
+                        )
+
+                        # Q学習を行わない場合
+                        if not self.q_learning:
+                            continue
 
                         # 過去に実行した政策に対して、現在の状態を踏まえて評価する
                         if ql_action is not None and ql_status is not None:
@@ -184,6 +192,14 @@ class Simulator:
                         else:
                             # アクションが実行不可能の場合
                             action = QLearningAction.IMPOSSIBLE.value
+
+                        # アクションを記録
+                        self.recorder.save_q_action(
+                            episode, record_day, action
+                        )
+                        self.recorder.save_q_history(
+                            prev_s=ql_status, next_s=env_status, a_val=action
+                        )
 
                         ql_status = env_status
                         ql_action = action
@@ -405,6 +421,35 @@ class Simulator:
         data.to_csv(output_path, index=False)
         logger.info("Q-Score {} を出力しました。".format(filename))
 
+    def output_q_state_csv(self):
+        """ Q-State (.csv) ファイルを出力 """
+        data = self.recorder.get_q_state()
+
+        filename = "q-state.csv"
+        logger.info("状態遷移情報 {} を出力しています...".format(filename))
+        path = os.path.join("output", filename)
+        data.to_csv(path, index=False)
+        logger.info("状態遷移情報 {} を出力しました。".format(filename))
+
+    def output_q_action_csv(self):
+        """ Q-Action (.csv) ファイルを出力 """
+        data = self.recorder.get_q_action()
+
+        filename = "q-action.csv"
+        logger.info("実施アクション情報 {} を出力しています...".format(filename))
+        path = os.path.join("output", filename)
+        data.to_csv(path, index=False)
+        logger.info("実施アクション情報 {} を出力しました。".format(filename))
+
+    def output_q_state_graph(self):
+        """ 状態遷移図を出力 """
+        data = self.recorder.get_q_history()
+
+        filename = "state_graph.png"
+        logger.info("状態遷移図 {} を出力しています...".format(filename))
+        path = os.path.join("output", "images", filename)
+        Visualizer.output_q_history(path, data)
+        logger.info("状態遷移図 {} を出力しました。".format(filename))
         pass
 
     def output_world_graph(self):

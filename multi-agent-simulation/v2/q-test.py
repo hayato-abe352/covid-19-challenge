@@ -37,6 +37,7 @@ def main(q_table_path=None):
         infection_setting,
     )
     simulator.run()
+    simulator.output_q_state_csv()
 
     # シミュレーション結果を移動
     print("[Step-2/4] 出力ディレクトリに結果を格納")
@@ -56,6 +57,9 @@ def main(q_table_path=None):
         q_table_path,
     )
     simulator.run_with_q_model()
+    simulator.output_q_state_csv()
+    simulator.output_q_action_csv()
+    simulator.output_q_state_graph()
 
     # シミュレーション結果を移動
     print("[Step-4/4] 出力ディレクトリに結果を格納")
