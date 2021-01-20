@@ -26,6 +26,9 @@ def main(q_table_path=None):
     agent_setting = read_settings(AGENT_SETTING)
     infection_setting = read_settings(INFECTION_MODEL_SETTING)
 
+    # モデルなし・モデルありの両パターンで試行回数を共通化する
+    simulation_setting["episode"] = 10
+
     # Q-Learning のモデルなしでシミュレート
     print("[Step-1/4] Q-Learning モデルを適用しないシミュレーション")
     simulation_setting["simulation_recording"] = True

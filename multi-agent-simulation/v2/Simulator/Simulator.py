@@ -198,7 +198,9 @@ class Simulator:
                             episode, record_day, action
                         )
                         self.recorder.save_q_history(
-                            prev_s=ql_status, next_s=env_status, a_val=action
+                            prev_s=ql_status,
+                            next_s=env_status,
+                            a_val=ql_action,
                         )
 
                         ql_status = env_status

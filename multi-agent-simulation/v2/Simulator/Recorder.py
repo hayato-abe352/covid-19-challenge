@@ -169,7 +169,7 @@ class Recorder:
         """ Q-Learning の状態変化履歴を記録します """
         prev_s = self._get_state_code(prev_s)
         next_s = self._get_state_code(next_s)
-        action = self._action[a_val]
+        action = self._action[a_val] if a_val is not None else "*"
         data = {
             "prev_state": prev_s,
             "next_state": next_s,
