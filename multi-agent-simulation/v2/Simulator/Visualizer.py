@@ -278,4 +278,5 @@ class Visualizer:
             label = "{}/{:.1%}".format(row["action"], row["transition_prob"])
             G.edge(before, after, label=label)
         G.node("start", shape="circle", color="pink")
+        G.node("end", shape="circle", color="pink")
         G.render(output_path)

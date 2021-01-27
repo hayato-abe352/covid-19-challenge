@@ -206,6 +206,12 @@ class Simulator:
                         ql_status = env_status
                         ql_action = action
 
+            self.recorder.save_q_history(
+                prev_s=ql_status,
+                next_s="end",
+                a_val=None,
+            )
+
             if self.q_learning and not is_q_testing:
                 logger.info("Experience Replay を実行します。")
                 # Experience Replay による機械学習

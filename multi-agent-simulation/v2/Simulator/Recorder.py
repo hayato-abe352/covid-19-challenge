@@ -168,7 +168,7 @@ class Recorder:
     def save_q_history(self, prev_s, next_s, a_val):
         """ Q-Learning の状態変化履歴を記録します """
         prev_s = self._get_state_code(prev_s)
-        next_s = self._get_state_code(next_s)
+        next_s = self._get_state_code(next_s) if next_s != "end" else "end"
         action = self._action[a_val] if a_val is not None else "*"
         data = {
             "prev_state": prev_s,
