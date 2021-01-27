@@ -84,9 +84,8 @@ class Recorder:
         # 状態の略式コード定義
         self._infection_state = {
             QLearningInfectionStatus.BEFORE_PANDEMIC.name: "BP",
-            QLearningInfectionStatus.PHASE1.name: "Ph1",
-            QLearningInfectionStatus.PHASE2.name: "Ph2",
-            QLearningInfectionStatus.PHASE3.name: "Ph3",
+            QLearningInfectionStatus.SPREAD.name: "SP",
+            QLearningInfectionStatus.EPIDEMIC.name: "EP",
             QLearningInfectionStatus.CONVERGENCE.name: "CV",
             QLearningInfectionStatus.AFTER_PANDEMIC.name: "AP",
         }

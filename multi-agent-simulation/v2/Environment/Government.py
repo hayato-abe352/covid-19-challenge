@@ -48,19 +48,13 @@ class Government:
         self.execution_status = None
         self.init_execution_status()
 
-        # 状態判定の閾値
-        self.explosion_thresh = 1.3
-        self.spread_thresh = 1.1
-        self.convergence_thresh = 0.9
-
         # スコア基準値
         self.impossible_action_score = -1000
         self.infection_score = {
             "BEFORE_PANDEMIC": 100,
-            "PHASE1": -200,  # 感染拡大期
-            "PHASE2": -1000,  # 感染爆発期
-            "PHASE3": -50,  # 蔓延期
-            "CONVERGENCE": 0,
+            "SPREAD": -300,  # 感染拡大期
+            "EPIDEMIC": -50,  # 蔓延期
+            "CONVERGENCE": 0,  # 収束期
             "AFTER_PANDEMIC": 0,
         }
         self.hospital_score = {
@@ -150,22 +144,16 @@ class Government:
                 return QLearningInfectionStatus.AFTER_PANDEMIC
         self.alert = True
 
-        increase_rate = current_avg / past_avg
+        # 感染者が 5% 以上増加傾向の場合 => 感染拡大
+        if current_avg > (past_avg * 1.05):
+            return QLearningInfectionStatus.SPREAD
 
-        # 感染者が急激に増加傾向の場合 => 感染爆発
-        if self.explosion_thresh < increase_rate:
-            return QLearningInfectionStatus.PHASE2
-
-        # 感染者が増加傾向の場合 => 感染拡大
-        if self.spread_thresh < increase_rate:
-            return QLearningInfectionStatus.PHASE1
-
-        # 感染者が減少傾向の場合 => 感染収束
-        if increase_rate < self.convergence_thresh:
+        # 感染者が 5% 以上減少傾向の場合 => 感染収束
+        if current_avg < (past_avg * 0.95):
             return QLearningInfectionStatus.CONVERGENCE
 
         # 感染者の増加傾向が緩やかな場合 => 蔓延
-        return QLearningInfectionStatus.PHASE3
+        return QLearningInfectionStatus.EPIDEMIC
 
     def _decide_hospital_status(self):
         """ 病院ステータスを決定 """
@@ -274,15 +262,13 @@ class QLearningInfectionStatus(Enum):
     # 感染拡大前
     BEFORE_PANDEMIC = 0
     # 感染拡大
-    PHASE1 = 1
-    # 感染爆発
-    PHASE2 = 2
+    SPREAD = 1
     # 蔓延
-    PHASE3 = 3
+    EPIDEMIC = 2
     # 感染収束
-    CONVERGENCE = 4
+    CONVERGENCE = 3
     # 感染拡大後
-    AFTER_PANDEMIC = 5
+    AFTER_PANDEMIC = 4
 
 
 class QLearningHospitalStatus(Enum):
